@@ -1,2 +1,29 @@
 # Validation samples may contain sensitive prompts/paths
 docs/validation/*.jsonl
+
+# Claude Code session data
+.superpowers/
+.claude/
+
+# Rust
+target/
+# Ignore workspace Cargo.lock (binaries typically commit lockfiles, but workspace root doesn't need one)
+Cargo.lock
+
+# Tauri build output
+src-tauri/target/
+src-tauri/gen/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# AI Light runtime files (live in user's home, but in case of test)
+.ai_light/
+runtime.json
