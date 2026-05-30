@@ -1,0 +1,2 @@
+# Validation samples may contain sensitive prompts/paths
+docs/validation/*.jsonl
