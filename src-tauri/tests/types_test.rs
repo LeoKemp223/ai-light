@@ -1,4 +1,4 @@
-use ai_light::types::{Status, Tool, SessionRef, LightState};
+use ai_light::types::{LightState, SessionRef, Status, Tool};
 use std::time::Instant;
 
 #[test]
@@ -19,10 +19,7 @@ fn test_status_max() {
 
 #[test]
 fn test_light_state_aggregation() {
-    let mut light = LightState::new(
-        "/home/user/project".to_string(),
-        "project".to_string(),
-    );
+    let mut light = LightState::new("/home/user/project".to_string(), "project".to_string());
 
     // No sessions = Idle
     light.aggregate_status();

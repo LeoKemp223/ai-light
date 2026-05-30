@@ -1,8 +1,8 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
-  "productName": "ai-light",
+  "productName": "AI Light",
   "version": "0.1.0",
-  "identifier": "com.ai-light.app",
+  "identifier": "com.ai-light.desktop",
   "build": {
     "frontendDist": "../src",
     "devUrl": null,
@@ -10,6 +10,7 @@
     "beforeBuildCommand": null
   },
   "app": {
+    "withGlobalTauri": true,
     "windows": [
       {
         "title": "AI Light",
@@ -27,8 +28,11 @@
     }
   },
   "bundle": {
-    "active": false,
+    "active": true,
     "targets": "all",
-    "icon": []
+    "icon": ["icons/icon.ico"],
+    "resources": {
+      "../target/release/ai-light-hook.exe": "ai-light-hook.exe"
+    }
   }
 }

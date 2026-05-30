@@ -15,7 +15,7 @@ pub enum Tool {
     Codex,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize)]
 pub struct SessionRef {
     pub session_id: String,
     pub tool: Tool,
@@ -24,7 +24,7 @@ pub struct SessionRef {
     pub started_at: Instant,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize)]
 pub struct LightState {
     pub project_id: String,
     pub project_label: String,

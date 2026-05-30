@@ -7,6 +7,8 @@ docs/validation/*.jsonl
 
 # Rust
 target/
+.codex-target*/
+.codex-file-probe
 # Ignore workspace Cargo.lock (binaries typically commit lockfiles, but workspace root doesn't need one)
 Cargo.lock
 

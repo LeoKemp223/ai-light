@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Claude Code Integration</title>
+    <link rel="stylesheet" href="install-hooks.css" />
+  </head>
+  <body>
+    <main class="dialog">
+      <h1>Claude Code Integration</h1>
+      <p>
+        AI Light can add local hooks to <code>~/.claude/settings.json</code> so
+        Claude Code status changes appear in the traffic light.
+      </p>
+      <p>
+        Existing settings will be backed up to <code>settings.json.bak</code>.
+      </p>
+
+      <pre id="preview" hidden></pre>
+      <div id="status" role="status"></div>
+
+      <footer>
+        <button id="allow" class="primary" type="button">Allow</button>
+        <button id="later" type="button">Later</button>
+        <button id="view" type="button">View</button>
+      </footer>
+    </main>
+    <script src="install-hooks.js"></script>
+  </body>
+</html>
