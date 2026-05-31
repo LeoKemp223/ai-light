@@ -182,6 +182,10 @@ fn apply_hook_event(aggregator: &StateAggregator, event: HookEvent) {
             aggregator.remove_session(&event.session_id);
         }
         _ => {
+            if should_ignore_late_event_after_done(aggregator, &event) {
+                return;
+            }
+
             if let Some(status) = HookEvent::event_type_to_status(&event.event_type) {
                 aggregator.update_session_status(&event.session_id, status);
             }
@@ -191,6 +195,17 @@ fn apply_hook_event(aggregator: &StateAggregator, event: HookEvent) {
             }
         }
     }
+}
+
+fn should_ignore_late_event_after_done(aggregator: &StateAggregator, event: &HookEvent) -> bool {
+    if aggregator.session_status(&event.session_id) != Some(Status::Done) {
+        return false;
+    }
+
+    matches!(
+        event.event_type.as_str(),
+        "pre-tool-use" | "permission-request" | "post-tool-use" | "notification"
+    )
 }
 
 fn find_header_split(buffer: &[u8]) -> Option<(usize, usize)> {

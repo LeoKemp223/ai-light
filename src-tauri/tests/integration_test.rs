@@ -52,6 +52,25 @@ fn hook_http_server_drives_session_lifecycle() {
         lights.len() == 1 && lights[0].status == Status::Done
     });
 
+    post_event(port, r#"{"event_type":"notification","session_id":"s1"}"#);
+    post_event(port, r#"{"event_type":"post-tool-use","session_id":"s1"}"#);
+    post_event(
+        port,
+        r#"{"event_type":"permission-request","session_id":"s1"}"#,
+    );
+
+    eventually(|| {
+        let lights = aggregator.get_lights();
+        lights.len() == 1 && lights[0].status == Status::Done
+    });
+
+    post_event(port, r#"{"event_type":"prompt-submit","session_id":"s1"}"#);
+
+    eventually(|| {
+        let lights = aggregator.get_lights();
+        lights.len() == 1 && lights[0].status == Status::Working
+    });
+
     post_event(port, r#"{"event_type":"session-end","session_id":"s1"}"#);
 
     eventually(|| {

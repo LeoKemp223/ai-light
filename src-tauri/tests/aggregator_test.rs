@@ -25,6 +25,7 @@ fn update_session_status_reaggregates_light() {
 
     let lights = agg.get_lights();
     assert_eq!(lights[0].status, Status::Done);
+    assert_eq!(agg.session_status("s1"), Some(Status::Done));
 }
 
 #[test]

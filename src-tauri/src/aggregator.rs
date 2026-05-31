@@ -82,6 +82,18 @@ impl StateAggregator {
         }
     }
 
+    pub fn session_status(&self, session_id: &str) -> Option<Status> {
+        let state = self.state.read().expect("aggregator state lock poisoned");
+        let project_id = state.session_to_project.get(session_id)?;
+        let light = state.lights.get(project_id)?;
+
+        light
+            .sessions
+            .iter()
+            .find(|session| session.session_id == session_id)
+            .map(|session| session.status)
+    }
+
     pub fn remove_session(&self, session_id: &str) {
         let changed;
 
