@@ -1,7 +1,13 @@
 use ai_light::config::{get_config_dir, AppConfig, RuntimeConfig};
+use std::sync::Mutex;
+
+static CONFIG_ENV_LOCK: Mutex<()> = Mutex::new(());
 
 #[test]
 fn config_dir_points_to_ai_light_home_directory() {
+    let _guard = CONFIG_ENV_LOCK.lock().unwrap();
+    std::env::remove_var("AI_LIGHT_CONFIG_DIR");
+
     let dir = get_config_dir();
 
     assert_eq!(dir.file_name().unwrap().to_string_lossy(), ".ai_light");
@@ -32,6 +38,27 @@ fn app_config_deserializes_old_documents_with_defaults() {
 }
 
 #[test]
+fn load_app_config_accepts_utf8_bom() {
+    let _guard = CONFIG_ENV_LOCK.lock().unwrap();
+    let config_dir = std::env::temp_dir().join(unique_name("ai-light-config-bom"));
+    std::fs::create_dir_all(&config_dir).unwrap();
+    std::env::set_var("AI_LIGHT_CONFIG_DIR", &config_dir);
+
+    std::fs::write(
+        config_dir.join("config.json"),
+        "\u{feff}{\"http_bind\":\"0.0.0.0\",\"http_port\":17321}",
+    )
+    .unwrap();
+
+    let config = ai_light::config::load_app_config();
+    assert_eq!(config.http_bind, "0.0.0.0");
+    assert_eq!(config.http_port, Some(17321));
+
+    let _ = std::fs::remove_dir_all(config_dir);
+    std::env::remove_var("AI_LIGHT_CONFIG_DIR");
+}
+
+#[test]
 fn runtime_config_serializes_http_port() {
     let runtime = RuntimeConfig { http_port: 12345 };
 
@@ -40,4 +67,12 @@ fn runtime_config_serializes_http_port() {
 
     assert!(json.contains("12345"));
     assert_eq!(parsed, runtime);
+}
+
+fn unique_name(prefix: &str) -> String {
+    let nanos = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .unwrap()
+        .as_nanos();
+    format!("{prefix}-{nanos}")
 }

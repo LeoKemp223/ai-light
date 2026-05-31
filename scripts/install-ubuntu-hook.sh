@@ -73,6 +73,9 @@ ai_light_url = sys.argv[3]
 events = [
     ("SessionStart", "session-start"),
     ("UserPromptSubmit", "prompt-submit"),
+    ("PreToolUse", "pre-tool-use"),
+    ("PermissionRequest", "permission-request"),
+    ("PostToolUse", "post-tool-use"),
     ("Notification", "notification"),
     ("Stop", "stop"),
     ("SessionEnd", "session-end"),

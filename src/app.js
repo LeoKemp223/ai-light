@@ -106,6 +106,7 @@ function createAppHandle() {
   root.addEventListener("contextmenu", (event) => {
     event.preventDefault();
     showMenu(event.clientX, event.clientY, [
+      ["Settings", () => safeInvoke("open_settings")],
       ["Diagnostics", () => showDiagnostics()],
       ["Logs", () => safeInvoke("open_app_log")],
       ["Quit", () => safeInvoke("quit_app")],
@@ -139,6 +140,7 @@ function createProjectLight(lightState) {
       ["Copy Path", () => copyProjectPath(projectId)],
       ["Logs", () => safeInvoke("open_session_logs", { projectId })],
       ["App Log", () => safeInvoke("open_app_log")],
+      ["Settings", () => safeInvoke("open_settings")],
       ["Diagnostics", () => showDiagnostics()],
       ["Remove", () => safeInvoke("remove_light", { projectId })],
     ]);

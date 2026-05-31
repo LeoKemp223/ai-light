@@ -13,6 +13,7 @@
     "withGlobalTauri": true,
     "windows": [
       {
+        "label": "main",
         "title": "AI Light",
         "width": 400,
         "height": 190,
@@ -22,6 +23,21 @@
         "shadow": false,
         "alwaysOnTop": true,
         "skipTaskbar": true
+      },
+      {
+        "label": "settings",
+        "title": "AI Light Settings",
+        "url": "settings.html",
+        "width": 480,
+        "height": 360,
+        "resizable": false,
+        "decorations": true,
+        "transparent": false,
+        "shadow": true,
+        "alwaysOnTop": false,
+        "skipTaskbar": false,
+        "visible": false,
+        "center": true
       }
     ],
     "security": {

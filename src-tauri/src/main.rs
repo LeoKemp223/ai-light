@@ -5,7 +5,7 @@ use ai_light::app_lock::AppLock;
 use ai_light::config::load_app_config;
 use ai_light::http_server::{existing_instance_is_healthy, start_http_server};
 use std::sync::Arc;
-use tauri::{Emitter, Manager, WebviewUrl, WebviewWindowBuilder};
+use tauri::{Emitter, Manager, WebviewUrl, WebviewWindowBuilder, WindowEvent};
 
 mod ipc;
 
@@ -34,6 +34,8 @@ fn main() {
             ipc::open_project,
             ipc::open_session_logs,
             ipc::open_app_log,
+            ipc::get_app_config,
+            ipc::save_app_config_command,
             ipc::copy_path,
             ipc::pause_monitoring,
             ipc::resume_monitoring,
@@ -52,6 +54,16 @@ fn main() {
             let window = app
                 .get_webview_window("main")
                 .expect("main window should exist");
+            if let Some(settings_window) = app.get_webview_window("settings") {
+                let window_to_hide = settings_window.clone();
+                settings_window.on_window_event(move |event| {
+                    if let WindowEvent::CloseRequested { api, .. } = event {
+                        api.prevent_close();
+                        let _ = window_to_hide.hide();
+                    }
+                });
+            }
+
             let emit_aggregator = Arc::clone(&aggregator);
             let emit_window = window.clone();
 

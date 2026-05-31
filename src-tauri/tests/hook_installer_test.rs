@@ -9,6 +9,9 @@ fn merge_hooks_creates_hooks_object_when_missing() {
     let hooks = merged.get("hooks").unwrap();
     assert!(hooks.get("SessionStart").is_some());
     assert!(hooks.get("UserPromptSubmit").is_some());
+    assert!(hooks.get("PreToolUse").is_some());
+    assert!(hooks.get("PermissionRequest").is_some());
+    assert!(hooks.get("PostToolUse").is_some());
     assert!(hooks.get("Notification").is_some());
     assert!(hooks.get("Stop").is_some());
     assert!(hooks.get("SessionEnd").is_some());
@@ -31,6 +34,15 @@ fn merge_hooks_preserves_existing_settings_and_hooks() {
     assert!(merged["hooks"].get("PreToolUse").is_some());
     assert!(merged["hooks"].get("SessionStart").is_some());
     assert_eq!(merged["theme"], "dark");
+
+    let pre_tool_use = merged["hooks"]["PreToolUse"].as_array().unwrap();
+    assert!(pre_tool_use
+        .iter()
+        .any(|entry| entry["hooks"][0]["command"] == "echo test"));
+    assert!(pre_tool_use.iter().any(|entry| entry["hooks"][0]["command"]
+        .as_str()
+        .unwrap()
+        .contains("ai-light-hook")));
 }
 
 #[test]

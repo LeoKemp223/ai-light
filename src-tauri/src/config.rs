@@ -64,7 +64,8 @@ pub fn load_app_config() -> AppConfig {
         return AppConfig::default();
     };
 
-    serde_json::from_str(&content).unwrap_or_default()
+    let content = content.strip_prefix('\u{feff}').unwrap_or(&content);
+    serde_json::from_str(content).unwrap_or_default()
 }
 
 pub fn save_app_config(config: &AppConfig) -> io::Result<()> {

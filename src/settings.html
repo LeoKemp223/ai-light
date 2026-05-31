@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>AI Light Settings</title>
+    <link rel="stylesheet" href="settings.css" />
+  </head>
+  <body>
+    <main class="settings">
+      <header>
+        <h1>AI Light Settings</h1>
+        <p id="config-path"></p>
+      </header>
+
+      <section class="field">
+        <label for="http-bind">Network</label>
+        <select id="http-bind">
+          <option value="127.0.0.1">Local only</option>
+          <option value="0.0.0.0">LAN forwarding</option>
+        </select>
+      </section>
+
+      <section class="field">
+        <label for="http-port">Port</label>
+        <input id="http-port" type="number" min="1" max="65535" placeholder="Auto" />
+      </section>
+
+      <dl>
+        <div>
+          <dt>Active port</dt>
+          <dd id="runtime-port">Unknown</dd>
+        </div>
+      </dl>
+
+      <div id="status" role="status"></div>
+
+      <footer>
+        <button id="save" class="primary" type="button">Save</button>
+        <button id="close" type="button">Close</button>
+      </footer>
+    </main>
+    <script src="settings.js"></script>
+  </body>
+</html>

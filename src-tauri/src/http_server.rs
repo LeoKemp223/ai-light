@@ -25,6 +25,9 @@ impl HookEvent {
         match event_type {
             "session-start" => Some(Status::Idle),
             "prompt-submit" => Some(Status::Working),
+            "pre-tool-use" => Some(Status::Working),
+            "permission-request" => Some(Status::Error),
+            "post-tool-use" => Some(Status::Working),
             "notification" => Some(Status::Error),
             "stop" => Some(Status::Done),
             "session-end" => None,

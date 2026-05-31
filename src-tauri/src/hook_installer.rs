@@ -2,9 +2,12 @@ use serde_json::{json, Value};
 use std::fs;
 use std::path::{Path, PathBuf};
 
-const HOOK_EVENTS: [(&str, &str); 5] = [
+const HOOK_EVENTS: [(&str, &str); 8] = [
     ("SessionStart", "session-start"),
     ("UserPromptSubmit", "prompt-submit"),
+    ("PreToolUse", "pre-tool-use"),
+    ("PermissionRequest", "permission-request"),
+    ("PostToolUse", "post-tool-use"),
     ("Notification", "notification"),
     ("Stop", "stop"),
     ("SessionEnd", "session-end"),
@@ -128,7 +131,24 @@ pub fn check_hooks_installed() -> bool {
         return false;
     };
 
-    content.contains(hook_binary_name())
+    let Ok(settings) = serde_json::from_str::<Value>(&content) else {
+        return false;
+    };
+
+    let Some(hooks) = settings.get("hooks").and_then(Value::as_object) else {
+        return false;
+    };
+
+    HOOK_EVENTS.iter().all(|(claude_event, hook_event)| {
+        hooks
+            .get(*claude_event)
+            .and_then(Value::as_array)
+            .is_some_and(|entries| {
+                entries
+                    .iter()
+                    .any(|entry| contains_ai_light_hook_for_event(entry, hook_event))
+            })
+    })
 }
 
 fn hook_binary_name() -> &'static str {
@@ -148,18 +168,35 @@ fn bundled_hook_candidates(resource_dir: &Path) -> Vec<PathBuf> {
 }
 
 fn remove_existing_ai_light_hooks(event_hooks: &mut Vec<Value>) {
-    event_hooks.retain(|entry| {
-        let Some(commands) = entry.get("hooks").and_then(Value::as_array) else {
-            return true;
-        };
+    event_hooks.retain(|entry| !entry_contains_ai_light_hook(entry));
+}
 
-        !commands.iter().any(|command| {
-            command
-                .get("command")
-                .and_then(Value::as_str)
-                .is_some_and(|command| command.contains("ai-light-hook"))
-        })
-    });
+fn entry_contains_ai_light_hook(entry: &Value) -> bool {
+    let Some(commands) = entry.get("hooks").and_then(Value::as_array) else {
+        return false;
+    };
+
+    commands.iter().any(|command| {
+        command
+            .get("command")
+            .and_then(Value::as_str)
+            .is_some_and(|command| command.contains("ai-light-hook"))
+    })
+}
+
+fn contains_ai_light_hook_for_event(entry: &Value, hook_event: &str) -> bool {
+    let Some(commands) = entry.get("hooks").and_then(Value::as_array) else {
+        return false;
+    };
+
+    commands.iter().any(|command| {
+        command
+            .get("command")
+            .and_then(Value::as_str)
+            .is_some_and(|command| {
+                command.contains(hook_binary_name()) && command.contains(hook_event)
+            })
+    })
 }
 
 pub fn hook_binary_is_current(source: &Path, destination: &Path) -> Result<bool, std::io::Error> {

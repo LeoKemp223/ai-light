@@ -48,6 +48,18 @@ fn map_hook_event_types_to_statuses() {
         Some(Status::Working)
     );
     assert_eq!(
+        HookEvent::event_type_to_status("pre-tool-use"),
+        Some(Status::Working)
+    );
+    assert_eq!(
+        HookEvent::event_type_to_status("permission-request"),
+        Some(Status::Error)
+    );
+    assert_eq!(
+        HookEvent::event_type_to_status("post-tool-use"),
+        Some(Status::Working)
+    );
+    assert_eq!(
         HookEvent::event_type_to_status("notification"),
         Some(Status::Error)
     );

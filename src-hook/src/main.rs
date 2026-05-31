@@ -97,6 +97,11 @@ fn normalize_event_type(event_type: &str) -> String {
         "UserPromptSubmit" | "prompt_submit" | "user-prompt-submit" | "userpromptsubmit" => {
             "prompt-submit"
         }
+        "PreToolUse" | "pre_tool_use" | "pre-tool-use" | "pretooluse" => "pre-tool-use",
+        "PermissionRequest" | "permission_request" | "permission-request" | "permissionrequest" => {
+            "permission-request"
+        }
+        "PostToolUse" | "post_tool_use" | "post-tool-use" | "posttooluse" => "post-tool-use",
         "Notification" | "notification" => "notification",
         "Stop" | "stop" => "stop",
         "SessionEnd" | "session_end" | "sessionend" => "session-end",
@@ -127,6 +132,12 @@ mod tests {
     fn normalizes_claude_hook_names() {
         assert_eq!(normalize_event_type("SessionStart"), "session-start");
         assert_eq!(normalize_event_type("UserPromptSubmit"), "prompt-submit");
+        assert_eq!(normalize_event_type("PreToolUse"), "pre-tool-use");
+        assert_eq!(
+            normalize_event_type("PermissionRequest"),
+            "permission-request"
+        );
+        assert_eq!(normalize_event_type("PostToolUse"), "post-tool-use");
         assert_eq!(normalize_event_type("SessionEnd"), "session-end");
     }
 

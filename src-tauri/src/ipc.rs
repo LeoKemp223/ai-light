@@ -1,12 +1,16 @@
 use ai_light::aggregator::StateAggregator;
-use ai_light::config::{get_config_dir, get_lock_path, get_log_path, get_runtime_path};
+use ai_light::config::{
+    get_config_dir, get_config_path, get_lock_path, get_log_path, get_runtime_path,
+    load_app_config, load_runtime_config, save_app_config,
+};
 use ai_light::hook_installer::{check_hooks_installed, install_hooks, preview_hook_config};
 use ai_light::types::LightState;
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use std::fs;
+use std::net::IpAddr;
 use std::path::PathBuf;
 use std::sync::Arc;
-use tauri::{AppHandle, State};
+use tauri::{AppHandle, Manager, State};
 
 #[derive(Debug, Serialize)]
 pub struct Diagnostics {
@@ -22,6 +26,22 @@ pub struct Diagnostics {
     pub runtime_exists: bool,
     pub light_count: usize,
     pub recent_log: String,
+}
+
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct AppConfigView {
+    pub config_path: String,
+    pub http_bind: String,
+    pub http_port: Option<u16>,
+    pub runtime_port: Option<u16>,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct AppConfigUpdate {
+    pub http_bind: String,
+    pub http_port: Option<u16>,
 }
 
 #[tauri::command]
@@ -64,6 +84,29 @@ pub fn open_app_log() -> Result<(), String> {
 }
 
 #[tauri::command]
+pub fn get_app_config() -> AppConfigView {
+    let config = load_app_config();
+    AppConfigView {
+        config_path: get_config_path().to_string_lossy().to_string(),
+        http_bind: config.http_bind,
+        http_port: config.http_port,
+        runtime_port: load_runtime_config().map(|runtime| runtime.http_port),
+    }
+}
+
+#[tauri::command]
+pub fn save_app_config_command(update: AppConfigUpdate) -> Result<(), String> {
+    validate_http_bind(&update.http_bind)?;
+    validate_http_port(update.http_port)?;
+
+    let mut config = load_app_config();
+    config.http_bind = update.http_bind;
+    config.http_port = update.http_port;
+
+    save_app_config(&config).map_err(|error| error.to_string())
+}
+
+#[tauri::command]
 pub fn get_diagnostics(aggregator: State<Arc<StateAggregator>>) -> Diagnostics {
     let log_path = get_log_path();
     let hook_binary_path = ai_light::hook_installer::get_hook_binary_path();
@@ -97,7 +140,29 @@ pub fn pause_monitoring() {}
 pub fn resume_monitoring() {}
 
 #[tauri::command]
-pub fn open_settings() {}
+pub fn open_settings(app: AppHandle) -> Result<(), String> {
+    let window = app
+        .get_webview_window("settings")
+        .ok_or_else(|| "settings window is not available".to_string())?;
+
+    window.show().map_err(|error| error.to_string())?;
+    window.set_focus().map_err(|error| error.to_string())?;
+    Ok(())
+}
+
+fn validate_http_bind(bind: &str) -> Result<(), String> {
+    bind.parse::<IpAddr>().map(|_| ()).map_err(|_| {
+        "HTTP bind must be an IP address, for example 127.0.0.1 or 0.0.0.0".to_string()
+    })
+}
+
+fn validate_http_port(port: Option<u16>) -> Result<(), String> {
+    if matches!(port, Some(0)) {
+        return Err("HTTP port must be blank or between 1 and 65535".to_string());
+    }
+
+    Ok(())
+}
 
 #[tauri::command]
 pub fn check_hooks() -> bool {
