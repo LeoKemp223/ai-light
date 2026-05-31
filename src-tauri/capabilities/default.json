@@ -3,5 +3,9 @@
   "identifier": "default",
   "description": "default capability",
   "windows": ["main", "install-hooks"],
-  "permissions": ["core:default"]
+  "permissions": [
+    "core:default",
+    "core:window:allow-start-dragging",
+    "core:window:allow-set-position"
+  ]
 }

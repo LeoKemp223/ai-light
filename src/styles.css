@@ -8,6 +8,7 @@
   color-scheme: dark;
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   background: transparent;
+  --hit-test-bg: rgba(0, 0, 0, 0.01);
 }
 
 html,
@@ -30,6 +31,7 @@ body {
   align-items: flex-start;
   gap: 8px;
   min-height: 132px;
+  background: var(--hit-test-bg);
 }
 
 .traffic-light {
@@ -38,6 +40,7 @@ body {
   grid-template-rows: 108px 18px;
   gap: 4px;
   justify-items: center;
+  background: var(--hit-test-bg);
   cursor: default;
 }
 
@@ -111,6 +114,7 @@ body {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  background: var(--hit-test-bg);
   text-shadow: 0 1px 2px rgba(0, 0, 0, 0.65);
 }
 

@@ -1,5 +1,8 @@
 const tauriEvent = window.__TAURI__?.event;
 const tauriCore = window.__TAURI__?.core;
+const currentWindow =
+  window.__TAURI__?.window?.getCurrentWindow?.() ??
+  window.__TAURI__?.webviewWindow?.getCurrentWebviewWindow?.();
 
 let lights = [];
 const lightElements = new Map();
@@ -24,6 +27,51 @@ document.addEventListener("keydown", (event) => {
   if (event.key === "Escape") {
     hideMenu();
   }
+});
+
+let isDragging = false;
+let dragStart = null;
+
+document.addEventListener("pointerdown", async (event) => {
+  if (!shouldStartDrag(event)) return;
+
+  try {
+    await currentWindow?.startDragging?.();
+    return;
+  } catch {}
+
+  isDragging = true;
+  const pos = await currentWindow?.outerPosition();
+  dragStart = {
+    mouseX: event.screenX,
+    mouseY: event.screenY,
+    winX: pos?.x ?? 0,
+    winY: pos?.y ?? 0,
+  };
+  try {
+    event.target.setPointerCapture(event.pointerId);
+  } catch {}
+});
+
+document.addEventListener("pointermove", async (event) => {
+  if (!isDragging || !dragStart || !currentWindow) return;
+
+  const dx = event.screenX - dragStart.mouseX;
+  const dy = event.screenY - dragStart.mouseY;
+
+  try {
+    const PhysicalPosition = window.__TAURI__?.dpi?.PhysicalPosition;
+    if (PhysicalPosition) {
+      await currentWindow.setPosition(
+        new PhysicalPosition(dragStart.winX + dx, dragStart.winY + dy),
+      );
+    }
+  } catch {}
+});
+
+document.addEventListener("pointerup", () => {
+  isDragging = false;
+  dragStart = null;
 });
 
 function render() {
@@ -102,11 +150,9 @@ function createLightElement({ label, status, title, standby = false }) {
   root.className = `traffic-light${standby ? " standby" : ""}`;
   root.title = title;
   root.dataset.status = status;
-  root.dataset.tauriDragRegion = "";
 
   const housing = document.createElement("div");
   housing.className = "light-housing";
-  housing.dataset.tauriDragRegion = "";
 
   housing.appendChild(createLamp("red", status === "Error"));
   housing.appendChild(createLamp("yellow", status === "Working"));
@@ -115,7 +161,6 @@ function createLightElement({ label, status, title, standby = false }) {
   const labelEl = document.createElement("div");
   labelEl.className = "light-label";
   labelEl.textContent = label || "unknown";
-  labelEl.dataset.tauriDragRegion = "";
 
   root.append(housing, labelEl);
   return root;
@@ -184,6 +229,18 @@ function showMenu(x, y, items) {
 
 function hideMenu() {
   menu.hidden = true;
+}
+
+function shouldStartDrag(event) {
+  if (event.button !== 0 || !menu.hidden) {
+    return false;
+  }
+
+  if (event.target.closest(".menu, button")) {
+    return false;
+  }
+
+  return Boolean(event.target.closest("#lights-container, .traffic-light"));
 }
 
 async function safeInvoke(command, payload) {
