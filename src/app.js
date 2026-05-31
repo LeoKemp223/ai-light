@@ -11,6 +11,7 @@ let resizeFrame = 0;
 const WINDOW_GUTTER_X = 8;
 const WINDOW_GUTTER_Y = 26;
 const WINDOW_PAINT_OVERFLOW_X_PER_LIGHT = 16;
+const MENU_EDGE_GUTTER = 12;
 
 const container = document.getElementById("lights-container");
 const menu = document.getElementById("menu");
@@ -114,8 +115,6 @@ function createAppHandle() {
     event.preventDefault();
     showMenu(event.clientX, event.clientY, [
       ["Settings", () => safeInvoke("open_settings")],
-      ["Diagnostics", () => showDiagnostics()],
-      ["Logs", () => safeInvoke("open_app_log")],
       ["Quit", () => safeInvoke("quit_app")],
     ]);
   });
@@ -145,10 +144,7 @@ function createProjectLight(lightState) {
     showMenu(event.clientX, event.clientY, [
       ["Open", () => safeInvoke("open_project", { projectId })],
       ["Copy Path", () => copyProjectPath(projectId)],
-      ["Logs", () => safeInvoke("open_session_logs", { projectId })],
-      ["App Log", () => safeInvoke("open_app_log")],
       ["Settings", () => safeInvoke("open_settings")],
-      ["Diagnostics", () => showDiagnostics()],
       ["Remove", () => safeInvoke("remove_light", { projectId })],
     ]);
   });
@@ -221,10 +217,13 @@ function tooltipFor(lightState) {
 function showMenu(x, y, items) {
   menu.replaceChildren();
 
-  for (const [label, action] of items) {
+  for (const [label, action, className] of [["Close", hideMenu, "menu-close"], ...items]) {
     const item = document.createElement("button");
     item.type = "button";
     item.textContent = label;
+    if (className) {
+      item.classList.add(className);
+    }
     item.addEventListener("click", () => {
       hideMenu();
       action();
@@ -235,8 +234,14 @@ function showMenu(x, y, items) {
   menu.hidden = false;
   const { innerWidth, innerHeight } = window;
   const rect = menu.getBoundingClientRect();
-  menu.style.left = `${Math.max(4, Math.min(x, innerWidth - rect.width - 4))}px`;
-  menu.style.top = `${Math.max(4, Math.min(y, innerHeight - rect.height - 4))}px`;
+  menu.style.left = `${Math.max(
+    MENU_EDGE_GUTTER,
+    Math.min(x, innerWidth - rect.width - MENU_EDGE_GUTTER),
+  )}px`;
+  menu.style.top = `${Math.max(
+    MENU_EDGE_GUTTER,
+    Math.min(y, innerHeight - rect.height - MENU_EDGE_GUTTER),
+  )}px`;
   scheduleWindowResize();
 }
 
@@ -274,8 +279,8 @@ async function resizeWindowToContent() {
 
   if (!menu.hidden) {
     const menuRect = menu.getBoundingClientRect();
-    width = Math.max(width, Math.ceil(menuRect.right + 4));
-    height = Math.max(height, Math.ceil(menuRect.bottom + 4));
+    width = Math.max(width, Math.ceil(menuRect.right + MENU_EDGE_GUTTER));
+    height = Math.max(height, Math.ceil(menuRect.bottom + MENU_EDGE_GUTTER));
   }
 
   width = Math.max(72, width);
