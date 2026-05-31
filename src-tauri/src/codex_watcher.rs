@@ -1,10 +1,10 @@
 use crate::aggregator::StateAggregator;
-use crate::config::get_config_dir;
+use crate::logging::append_log;
 use crate::types::{Status, Tool};
 use serde_json::Value;
 use std::collections::{HashMap, HashSet};
-use std::fs::{self, File, OpenOptions};
-use std::io::{self, BufRead, BufReader, Seek, SeekFrom, Write};
+use std::fs::{self, File};
+use std::io::{self, BufRead, BufReader, Seek, SeekFrom};
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use std::thread;
@@ -382,14 +382,7 @@ fn log_watcher_error(context: &str, error: &dyn std::fmt::Display) {
 }
 
 fn log_watcher_note(message: &str) {
-    let log_path = get_config_dir().join("ai-light.log");
-    if let Some(parent) = log_path.parent() {
-        let _ = fs::create_dir_all(parent);
-    }
-
-    if let Ok(mut file) = OpenOptions::new().create(true).append(true).open(log_path) {
-        let _ = writeln!(file, "[{:?}] codex_watcher: {message}", SystemTime::now());
-    }
+    let _ = append_log(&format!("codex_watcher: {message}"));
 }
 
 #[cfg(test)]

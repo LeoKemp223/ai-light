@@ -1,9 +1,28 @@
 use ai_light::aggregator::StateAggregator;
+use ai_light::config::{get_config_dir, get_lock_path, get_log_path, get_runtime_path};
 use ai_light::hook_installer::{check_hooks_installed, install_hooks, preview_hook_config};
 use ai_light::types::LightState;
+use serde::Serialize;
+use std::fs;
 use std::path::PathBuf;
 use std::sync::Arc;
 use tauri::{AppHandle, State};
+
+#[derive(Debug, Serialize)]
+pub struct Diagnostics {
+    pub config_dir: String,
+    pub runtime_path: String,
+    pub lock_path: String,
+    pub log_path: String,
+    pub claude_settings_path: String,
+    pub hook_binary_path: String,
+    pub codex_sessions_path: String,
+    pub hooks_installed: bool,
+    pub hook_binary_exists: bool,
+    pub runtime_exists: bool,
+    pub light_count: usize,
+    pub recent_log: String,
+}
 
 #[tauri::command]
 pub fn confirm_light(project_id: String, aggregator: State<Arc<StateAggregator>>) {
@@ -29,6 +48,41 @@ pub fn open_project(project_id: String) -> Result<(), String> {
 pub fn open_session_logs(project_id: String) -> Result<(), String> {
     let path = claude_project_log_dir(&project_id)?;
     open_path(&path.to_string_lossy())
+}
+
+#[tauri::command]
+pub fn open_app_log() -> Result<(), String> {
+    let log_path = get_log_path();
+    if !log_path.exists() {
+        if let Some(parent) = log_path.parent() {
+            fs::create_dir_all(parent).map_err(|error| error.to_string())?;
+        }
+        fs::write(&log_path, "").map_err(|error| error.to_string())?;
+    }
+
+    open_path(&log_path.to_string_lossy())
+}
+
+#[tauri::command]
+pub fn get_diagnostics(aggregator: State<Arc<StateAggregator>>) -> Diagnostics {
+    let log_path = get_log_path();
+    let hook_binary_path = ai_light::hook_installer::get_hook_binary_path();
+    Diagnostics {
+        config_dir: get_config_dir().to_string_lossy().to_string(),
+        runtime_path: get_runtime_path().to_string_lossy().to_string(),
+        lock_path: get_lock_path().to_string_lossy().to_string(),
+        log_path: log_path.to_string_lossy().to_string(),
+        claude_settings_path: ai_light::hook_installer::get_claude_settings_path()
+            .to_string_lossy()
+            .to_string(),
+        hook_binary_path: hook_binary_path.to_string_lossy().to_string(),
+        codex_sessions_path: codex_sessions_dir().to_string_lossy().to_string(),
+        hooks_installed: check_hooks_installed(),
+        hook_binary_exists: hook_binary_path.exists(),
+        runtime_exists: get_runtime_path().exists(),
+        light_count: aggregator.get_lights().len(),
+        recent_log: recent_log(&log_path),
+    }
 }
 
 #[tauri::command]
@@ -91,6 +145,22 @@ fn home_dir() -> Option<PathBuf> {
     std::env::var_os("USERPROFILE")
         .or_else(|| std::env::var_os("HOME"))
         .map(PathBuf::from)
+}
+
+fn codex_sessions_dir() -> PathBuf {
+    home_dir()
+        .unwrap_or_else(|| PathBuf::from("."))
+        .join(".codex")
+        .join("sessions")
+}
+
+fn recent_log(log_path: &PathBuf) -> String {
+    let Ok(content) = fs::read_to_string(log_path) else {
+        return String::new();
+    };
+
+    let lines: Vec<_> = content.lines().rev().take(20).collect();
+    lines.into_iter().rev().collect::<Vec<_>>().join("\n")
 }
 
 fn platform_open_command(path: &str) -> Result<std::process::Command, String> {

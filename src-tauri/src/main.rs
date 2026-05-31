@@ -1,6 +1,7 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
 use ai_light::aggregator::StateAggregator;
+use ai_light::app_lock::AppLock;
 use ai_light::http_server::{existing_instance_is_healthy, start_http_server};
 use std::sync::Arc;
 use tauri::{Emitter, Manager, WebviewUrl, WebviewWindowBuilder};
@@ -8,17 +9,29 @@ use tauri::{Emitter, Manager, WebviewUrl, WebviewWindowBuilder};
 mod ipc;
 
 fn main() {
+    let app_lock = match AppLock::acquire() {
+        Ok(Some(lock)) => lock,
+        Ok(None) => return,
+        Err(error) => {
+            eprintln!("failed to acquire app lock: {error}");
+            return;
+        }
+    };
+
     let aggregator = Arc::new(StateAggregator::new());
     let server_aggregator = Arc::clone(&aggregator);
 
     tauri::Builder::default()
         .manage(Arc::clone(&aggregator))
+        .manage(app_lock)
         .invoke_handler(tauri::generate_handler![
             ipc::confirm_light,
             ipc::remove_light,
             ipc::get_lights,
+            ipc::get_diagnostics,
             ipc::open_project,
             ipc::open_session_logs,
+            ipc::open_app_log,
             ipc::copy_path,
             ipc::pause_monitoring,
             ipc::resume_monitoring,

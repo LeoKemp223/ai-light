@@ -162,16 +162,12 @@ fn remove_existing_ai_light_hooks(event_hooks: &mut Vec<Value>) {
     });
 }
 
-fn hook_binary_is_current(source: &Path, destination: &Path) -> Result<bool, std::io::Error> {
+pub fn hook_binary_is_current(source: &Path, destination: &Path) -> Result<bool, std::io::Error> {
     if !destination.exists() {
         return Ok(false);
     }
 
-    let source_metadata = source.metadata()?;
-    let destination_metadata = destination.metadata()?;
-
-    Ok(source_metadata.len() == destination_metadata.len()
-        && source_metadata.modified().ok() <= destination_metadata.modified().ok())
+    Ok(fs::read(source)? == fs::read(destination)?)
 }
 
 fn shell_command_path(path: &Path) -> String {

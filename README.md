@@ -30,3 +30,4 @@ cargo test
 
 - [Design Spec](docs/superpowers/specs/2026-05-30-ai-light-design.md)
 - [Implementation Plan](docs/superpowers/plans/2026-05-30-ai-light-implementation.md)
+- [Build & Packaging Guide](docs/BUILDING.md)

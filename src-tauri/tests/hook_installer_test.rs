@@ -1,4 +1,4 @@
-use ai_light::hook_installer::merge_hooks;
+use ai_light::hook_installer::{hook_binary_is_current, merge_hooks};
 use serde_json::json;
 use std::path::Path;
 
@@ -95,4 +95,30 @@ fn merge_hooks_rejects_non_array_event_field() {
     );
 
     assert!(result.is_err());
+}
+
+#[test]
+fn hook_binary_current_compares_file_content() {
+    let dir = std::env::temp_dir().join(unique_name("ai-light-hook-current"));
+    std::fs::create_dir_all(&dir).unwrap();
+    let source = dir.join("source-hook");
+    let destination = dir.join("destination-hook");
+
+    std::fs::write(&source, "same-size-a").unwrap();
+    std::fs::write(&destination, "same-size-b").unwrap();
+    assert!(!hook_binary_is_current(&source, &destination).unwrap());
+
+    std::fs::write(&destination, "same-size-a").unwrap();
+    assert!(hook_binary_is_current(&source, &destination).unwrap());
+
+    std::fs::remove_dir_all(dir).unwrap();
+}
+
+fn unique_name(prefix: &str) -> String {
+    let nanos = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .unwrap()
+        .as_nanos();
+
+    format!("{prefix}-{nanos}")
 }

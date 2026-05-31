@@ -106,6 +106,8 @@ function createAppHandle() {
   root.addEventListener("contextmenu", (event) => {
     event.preventDefault();
     showMenu(event.clientX, event.clientY, [
+      ["Diagnostics", () => showDiagnostics()],
+      ["Logs", () => safeInvoke("open_app_log")],
       ["Quit", () => safeInvoke("quit_app")],
     ]);
   });
@@ -136,6 +138,8 @@ function createProjectLight(lightState) {
       ["Open", () => safeInvoke("open_project", { projectId })],
       ["Copy Path", () => copyProjectPath(projectId)],
       ["Logs", () => safeInvoke("open_session_logs", { projectId })],
+      ["App Log", () => safeInvoke("open_app_log")],
+      ["Diagnostics", () => showDiagnostics()],
       ["Remove", () => safeInvoke("remove_light", { projectId })],
     ]);
   });
@@ -264,6 +268,36 @@ async function copyProjectPath(projectId) {
   if (path && navigator.clipboard) {
     await navigator.clipboard.writeText(path);
   }
+}
+
+async function showDiagnostics() {
+  const diagnostics = await safeInvoke("get_diagnostics");
+  if (!diagnostics) return;
+
+  const text = [
+    "AI Light Diagnostics",
+    "",
+    `Config: ${diagnostics.config_dir}`,
+    `Runtime: ${diagnostics.runtime_path}`,
+    `Lock: ${diagnostics.lock_path}`,
+    `Log: ${diagnostics.log_path}`,
+    `Claude settings: ${diagnostics.claude_settings_path}`,
+    `Hook binary: ${diagnostics.hook_binary_path}`,
+    `Codex sessions: ${diagnostics.codex_sessions_path}`,
+    "",
+    `Hooks installed: ${diagnostics.hooks_installed}`,
+    `Hook binary exists: ${diagnostics.hook_binary_exists}`,
+    `Runtime exists: ${diagnostics.runtime_exists}`,
+    `Light count: ${diagnostics.light_count}`,
+    "",
+    "Recent log:",
+    diagnostics.recent_log || "(empty)",
+  ].join("\n");
+
+  if (navigator.clipboard) {
+    await navigator.clipboard.writeText(text);
+  }
+  alert(text);
 }
 
 refreshLights();

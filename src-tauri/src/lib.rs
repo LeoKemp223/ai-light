@@ -1,7 +1,9 @@
 pub mod aggregator;
+pub mod app_lock;
 pub mod codex_watcher;
 pub mod config;
 pub mod hook_installer;
 pub mod http_server;
+pub mod logging;
 pub mod project;
 pub mod types;

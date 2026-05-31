@@ -45,6 +45,14 @@ pub fn get_runtime_path() -> PathBuf {
     get_config_dir().join("runtime.json")
 }
 
+pub fn get_lock_path() -> PathBuf {
+    get_config_dir().join("ai-light.lock")
+}
+
+pub fn get_log_path() -> PathBuf {
+    get_config_dir().join("ai-light.log")
+}
+
 pub fn load_app_config() -> AppConfig {
     let path = get_config_path();
     let Ok(content) = fs::read_to_string(path) else {
