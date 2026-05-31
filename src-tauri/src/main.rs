@@ -2,6 +2,7 @@
 
 use ai_light::aggregator::StateAggregator;
 use ai_light::app_lock::AppLock;
+use ai_light::config::load_app_config;
 use ai_light::http_server::{existing_instance_is_healthy, start_http_server};
 use std::sync::Arc;
 use tauri::{Emitter, Manager, WebviewUrl, WebviewWindowBuilder};
@@ -18,6 +19,7 @@ fn main() {
         }
     };
 
+    let app_config = load_app_config();
     let aggregator = Arc::new(StateAggregator::new());
     let server_aggregator = Arc::clone(&aggregator);
 
@@ -57,7 +59,7 @@ fn main() {
                 let _ = emit_window.emit("state-changed", emit_aggregator.get_lights());
             });
 
-            start_http_server(Arc::clone(&server_aggregator))
+            start_http_server(Arc::clone(&server_aggregator), &app_config)
                 .map_err(|error| std::io::Error::other(error.to_string()))?;
             ai_light::codex_watcher::start_codex_watcher(Arc::clone(&aggregator))?;
 

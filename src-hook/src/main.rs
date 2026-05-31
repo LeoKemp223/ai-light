@@ -26,7 +26,7 @@ fn main() {
         return;
     };
 
-    let Some(config) = load_runtime_config() else {
+    let Some(target_url) = resolve_event_url() else {
         return;
     };
 
@@ -38,7 +38,7 @@ fn main() {
         tool_call: extract_string(&payload, &["tool_name", "tool", "toolName"]),
     };
 
-    post_event(config.http_port, &event);
+    post_event(&target_url, &event);
 }
 
 fn read_stdin_payload() -> Option<serde_json::Value> {
@@ -50,6 +50,18 @@ fn read_stdin_payload() -> Option<serde_json::Value> {
     }
 
     serde_json::from_str(&stdin_content).ok()
+}
+
+fn resolve_event_url() -> Option<String> {
+    if let Some(url) = env::var_os("AI_LIGHT_URL").and_then(|value| {
+        let value = value.to_string_lossy().trim().to_string();
+        (!value.is_empty()).then_some(value)
+    }) {
+        return Some(normalize_event_url(&url));
+    }
+
+    let config = load_runtime_config()?;
+    Some(format!("http://127.0.0.1:{}/events", config.http_port))
 }
 
 fn load_runtime_config() -> Option<RuntimeConfig> {
@@ -93,11 +105,18 @@ fn normalize_event_type(event_type: &str) -> String {
     .to_string()
 }
 
-fn post_event(port: u16, event: &HookEvent) {
-    let url = format!("http://127.0.0.1:{port}/events");
+fn post_event(url: &str, event: &HookEvent) {
     let client = reqwest::blocking::Client::new();
 
     let _ = client.post(url).json(event).send();
+}
+
+fn normalize_event_url(url: &str) -> String {
+    if url.ends_with("/events") {
+        url.to_string()
+    } else {
+        format!("{}/events", url.trim_end_matches('/'))
+    }
 }
 
 #[cfg(test)]
@@ -122,5 +141,21 @@ mod tests {
             extract_string(&payload, &["session_id", "sessionId"]),
             Some("abc123".to_string())
         );
+    }
+
+    #[test]
+    fn prefers_explicit_event_url_environment_variable() {
+        let previous = env::var_os("AI_LIGHT_URL");
+        env::set_var("AI_LIGHT_URL", "http://127.0.0.1:32123");
+
+        assert_eq!(
+            resolve_event_url(),
+            Some("http://127.0.0.1:32123/events".to_string())
+        );
+
+        match previous {
+            Some(value) => env::set_var("AI_LIGHT_URL", value),
+            None => env::remove_var("AI_LIGHT_URL"),
+        }
     }
 }

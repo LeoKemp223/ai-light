@@ -4,11 +4,14 @@ use std::io;
 use std::path::PathBuf;
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(default)]
 pub struct AppConfig {
     pub window_x: i32,
     pub window_y: i32,
     pub monitoring_paused: bool,
     pub hooks_installed: bool,
+    pub http_bind: String,
+    pub http_port: Option<u16>,
 }
 
 impl Default for AppConfig {
@@ -18,6 +21,8 @@ impl Default for AppConfig {
             window_y: 100,
             monitoring_paused: false,
             hooks_installed: false,
+            http_bind: "127.0.0.1".to_string(),
+            http_port: None,
         }
     }
 }

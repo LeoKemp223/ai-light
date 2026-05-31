@@ -256,7 +256,8 @@ Cross-platform desktop traffic light widget for monitoring AI coding assistants 
 
 - **Backend:** Rust (Tauri 2.x)
 - **Frontend:** Vanilla HTML/CSS/JS
-- **Platforms:** Windows, macOS, Linux (X11)
+- **GUI Platforms:** Windows, macOS
+- **Remote Client:** Ubuntu/Linux hook-only forwarding
 
 ## Development
 
@@ -2555,7 +2556,7 @@ Install the built package on a machine without AI Light:
 
 - Windows: Run `.msi` or `.exe`
 - macOS: Open `.dmg` and drag to Applications
-- Linux: Install `.deb` / `.rpm` / `.AppImage`
+- Ubuntu/Linux: install hook-only forwarding script; no GUI package
 
 Expected: App installs, hook binary is placed in `~/.ai_light/bin/`
 
@@ -2585,11 +2586,11 @@ Create `CHANGELOG.md`:
 - Claude Code integration via hooks
 - Project-level status aggregation
 - Traffic light UI (idle/working/error/done)
-- Cross-platform support (Windows, macOS, Linux X11)
+- GUI support for Windows/macOS plus Ubuntu/Linux hook-only forwarding
 
 ### Known Limitations
 - Codex support not yet implemented (planned for v0.2)
-- Linux Wayland compatibility untested
+- Ubuntu/Linux GUI is out of scope; hook-only forwarding still needs real Ubuntu validation
 - No system notifications
 ```
 

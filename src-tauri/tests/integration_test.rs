@@ -1,8 +1,9 @@
 use ai_light::aggregator::StateAggregator;
+use ai_light::config::AppConfig;
 use ai_light::http_server::start_http_server;
 use ai_light::types::Status;
 use std::io::{Read, Write};
-use std::net::TcpStream;
+use std::net::{TcpListener, TcpStream};
 use std::path::PathBuf;
 use std::sync::Arc;
 use std::time::Duration;
@@ -17,7 +18,7 @@ fn hook_http_server_drives_session_lifecycle() {
     std::fs::create_dir_all(&project_dir).unwrap();
 
     let aggregator = Arc::new(StateAggregator::new());
-    let port = start_http_server(Arc::clone(&aggregator)).unwrap();
+    let port = start_http_server(Arc::clone(&aggregator), &AppConfig::default()).unwrap();
 
     post_event(
         port,
@@ -59,6 +60,29 @@ fn hook_http_server_drives_session_lifecycle() {
     });
 
     let _ = std::fs::remove_dir_all(project_dir);
+    let _ = std::fs::remove_dir_all(config_dir);
+    std::env::remove_var("AI_LIGHT_CONFIG_DIR");
+}
+
+#[test]
+fn hook_http_server_respects_fixed_port_config() {
+    let config_dir = std::env::temp_dir().join(unique_name("ai-light-fixed-port-config"));
+    std::fs::create_dir_all(&config_dir).unwrap();
+    std::env::set_var("AI_LIGHT_CONFIG_DIR", &config_dir);
+
+    let probe = TcpListener::bind("127.0.0.1:0").unwrap();
+    let fixed_port = probe.local_addr().unwrap().port();
+    drop(probe);
+
+    let aggregator = Arc::new(StateAggregator::new());
+    let config = AppConfig {
+        http_port: Some(fixed_port),
+        ..AppConfig::default()
+    };
+
+    let port = start_http_server(aggregator, &config).unwrap();
+    assert_eq!(port, fixed_port);
+
     let _ = std::fs::remove_dir_all(config_dir);
     std::env::remove_var("AI_LIGHT_CONFIG_DIR");
 }

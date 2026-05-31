@@ -1,5 +1,5 @@
 use crate::aggregator::StateAggregator;
-use crate::config::{load_runtime_config, save_runtime_config, RuntimeConfig};
+use crate::config::{load_runtime_config, save_runtime_config, AppConfig, RuntimeConfig};
 use crate::types::{Status, Tool};
 use serde::{Deserialize, Serialize};
 use std::io::{self, Read, Write};
@@ -61,8 +61,14 @@ pub fn existing_instance_is_healthy() -> bool {
 
 pub fn start_http_server(
     aggregator: Arc<StateAggregator>,
+    app_config: &AppConfig,
 ) -> Result<u16, Box<dyn std::error::Error + Send + Sync>> {
-    let listener = TcpListener::bind("127.0.0.1:0")?;
+    let bind_address = format!(
+        "{}:{}",
+        app_config.http_bind,
+        app_config.http_port.unwrap_or(0)
+    );
+    let listener = TcpListener::bind(bind_address)?;
     let port = listener.local_addr()?.port();
 
     save_runtime_config(&RuntimeConfig { http_port: port })?;

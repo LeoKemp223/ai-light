@@ -1,6 +1,6 @@
 # AI Light
 
-Cross-platform desktop traffic light widget for monitoring AI coding assistants (Claude Code, Codex).
+Desktop traffic light widget for monitoring AI coding assistants (Claude Code, Codex).
 
 ## Status
 
@@ -10,7 +10,8 @@ Cross-platform desktop traffic light widget for monitoring AI coding assistants 
 
 - **Backend:** Rust (Tauri 2.x)
 - **Frontend:** Vanilla HTML/CSS/JS
-- **Platforms:** Windows, macOS, Linux (X11)
+- **GUI Platforms:** Windows, macOS
+- **Remote Client:** Ubuntu hook-only forwarding
 
 ## Development
 
@@ -31,3 +32,4 @@ cargo test
 - [Design Spec](docs/superpowers/specs/2026-05-30-ai-light-design.md)
 - [Implementation Plan](docs/superpowers/plans/2026-05-30-ai-light-implementation.md)
 - [Build & Packaging Guide](docs/BUILDING.md)
+- [Ubuntu Hook-Only Forwarding](docs/UBUNTU_HOOK_ONLY.md)

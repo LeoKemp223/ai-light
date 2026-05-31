@@ -15,10 +15,13 @@
 - Diagnostics and application log entries from the widget context menu.
 - Cross-platform single-instance guard using a file lock.
 - Content-based hook binary update detection.
-- Linux and macOS bundle resource configs for the non-`.exe` hook binary.
+- macOS bundle resource config for the non-`.exe` hook binary.
+- Optional remote hook mode with `AI_LIGHT_URL` for sending events from SSH/Linux clients to a Windows host.
+- Configurable HTTP bind address and fixed HTTP port for LAN-based monitoring.
+- Ubuntu hook-only installer script for configuring Claude Code forwarding without launching a GUI.
 
 ### Known Limitations
 
 - Windows MSI/NSIS packaging is verified via the npm Tauri CLI; a global Cargo-installed Tauri CLI is not installed.
-- Linux and macOS packaging configs exist but still need validation on native CI runners or real machines.
-- Linux Wayland behavior is untested; Linux MVP should be treated as X11-first.
+- macOS GUI packaging config exists but still needs validation on a native macOS runner or real machine.
+- Ubuntu/Linux is supported as a hook-only remote client, not as a GUI package.

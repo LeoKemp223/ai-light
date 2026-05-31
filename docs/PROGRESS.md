@@ -1,7 +1,7 @@
 # AI Light Implementation Progress
 
 **Last Updated:** 2026-05-31  
-**Current Status:** MVP implementation compiles, passes automated tests, produces Windows installers, and monitors Claude Code plus Codex sessions
+**Current Status:** MVP implementation compiles, passes automated tests, produces Windows installers, and monitors Claude Code plus Codex sessions. GUI targets are Windows/macOS; Ubuntu/Linux is hook-only for remote forwarding.
 
 ## Completed Baseline
 
@@ -73,7 +73,9 @@
   - Hook binary updates now compare file contents instead of size and mtime.
   - Right-click diagnostics show key runtime paths, hook status, light count, and recent app log lines.
   - App log can be opened from the widget context menu.
-  - Linux and macOS Tauri resource config files include the non-`.exe` hook binary name.
+  - macOS Tauri resource config includes the non-`.exe` hook binary name.
+  - Remote SSH/LAN mode is supported by `AI_LIGHT_URL` on the hook side plus configurable host bind address and fixed HTTP port.
+  - Ubuntu hook-only install script and `docs/UBUNTU_HOOK_ONLY.md` configure Claude Code forwarding without installing or showing a GUI on Ubuntu.
 - Latest verified Windows release artifacts:
   - `target/release/ai-light.exe`
   - `target/release/bundle/msi/AI Light_0.1.0_x64_en-US.msi`
@@ -108,12 +110,15 @@
   - `target/release/ai-light.exe` starts successfully.
   - `GET /health` returns `ok`.
   - Starting the app twice leaves only one `ai-light.exe` process running.
+  - Fixed HTTP port configuration is covered by integration tests.
+  - Hook `AI_LIGHT_URL` override is covered by hook CLI tests.
   - Windows MSI and NSIS installers are produced successfully.
 
 ## Remaining Work
 
 - Install Tauri CLI globally if desired; current successful packaging used `npx @tauri-apps/cli@2.11.2 build`.
-- Validate Linux and macOS packaging on native CI runners.
+- Validate macOS GUI packaging on a native CI runner.
+- Validate Ubuntu hook-only forwarding on a real Ubuntu client.
 - Optimize Codex watching so it does not recursively scan all session history every second.
 - Decide whether to remove the frontend polling fallback now that Tauri event push is working.
 - Implement or hide unfinished menu commands such as pause/resume/settings.
