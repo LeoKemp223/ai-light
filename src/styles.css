@@ -13,9 +13,9 @@
 
 html,
 body {
-  width: 100%;
-  min-width: 100%;
-  min-height: 100%;
+  width: max-content;
+  min-width: 0;
+  min-height: 0;
   overflow: hidden;
   background: transparent;
   user-select: none;
@@ -23,14 +23,13 @@ body {
 }
 
 body {
-  padding: 10px 10px 20px;
+  padding: 10px 52px 20px 8px;
 }
 
 #lights-container {
   display: flex;
   align-items: flex-start;
   gap: 8px;
-  min-height: 154px;
   background: var(--hit-test-bg);
 }
 

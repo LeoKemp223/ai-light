@@ -40,6 +40,7 @@ fn main() {
             ipc::pause_monitoring,
             ipc::resume_monitoring,
             ipc::open_settings,
+            ipc::resize_main_window,
             ipc::check_hooks,
             ipc::install_hooks_command,
             ipc::remove_hooks_command,

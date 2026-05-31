@@ -6,6 +6,10 @@ const currentWindow =
 
 let lights = [];
 const lightElements = new Map();
+let lastWindowSize = { width: 0, height: 0 };
+let resizeFrame = 0;
+const WINDOW_GUTTER_X = 8;
+const WINDOW_GUTTER_Y = 26;
 
 const container = document.getElementById("lights-container");
 const menu = document.getElementById("menu");
@@ -95,6 +99,8 @@ function render() {
       lightElements.delete(projectId);
     }
   }
+
+  scheduleWindowResize();
 }
 
 function createAppHandle() {
@@ -228,12 +234,84 @@ function showMenu(x, y, items) {
   menu.hidden = false;
   const { innerWidth, innerHeight } = window;
   const rect = menu.getBoundingClientRect();
-  menu.style.left = `${Math.min(x, innerWidth - rect.width - 4)}px`;
-  menu.style.top = `${Math.min(y, innerHeight - rect.height - 4)}px`;
+  menu.style.left = `${Math.max(4, Math.min(x, innerWidth - rect.width - 4))}px`;
+  menu.style.top = `${Math.max(4, Math.min(y, innerHeight - rect.height - 4))}px`;
+  scheduleWindowResize();
 }
 
 function hideMenu() {
   menu.hidden = true;
+  scheduleWindowResize();
+}
+
+function scheduleWindowResize() {
+  if (resizeFrame) {
+    cancelAnimationFrame(resizeFrame);
+  }
+
+  resizeFrame = requestAnimationFrame(resizeWindowToContent);
+}
+
+async function resizeWindowToContent() {
+  resizeFrame = 0;
+  if (!currentWindow) return;
+
+  const bodyStyle = getComputedStyle(document.body);
+  const paddingX =
+    parseFloat(bodyStyle.paddingLeft) + parseFloat(bodyStyle.paddingRight);
+  const paddingY =
+    parseFloat(bodyStyle.paddingTop) + parseFloat(bodyStyle.paddingBottom);
+
+  const contentSize = measureVisibleContent();
+  let width = Math.ceil(contentSize.width + paddingX + WINDOW_GUTTER_X);
+  let height = Math.ceil(contentSize.height + paddingY + WINDOW_GUTTER_Y);
+
+  if (!menu.hidden) {
+    const menuRect = menu.getBoundingClientRect();
+    width = Math.max(width, Math.ceil(menuRect.right + 4));
+    height = Math.max(height, Math.ceil(menuRect.bottom + 4));
+  }
+
+  width = Math.max(72, width);
+  height = Math.max(76, height);
+
+  if (lastWindowSize.width === width && lastWindowSize.height === height) {
+    return;
+  }
+
+  try {
+    await tauriCore?.invoke("resize_main_window", { width, height });
+    lastWindowSize = { width, height };
+    return;
+  } catch (error) {
+    console.debug("resizeWindowToContent", error);
+  }
+
+  const LogicalSize = window.__TAURI__?.dpi?.LogicalSize;
+  if (!LogicalSize) return;
+
+  try {
+    await currentWindow.setSize(new LogicalSize(width, height));
+    lastWindowSize = { width, height };
+  } catch (error) {
+    console.debug("resizeWindowToContent fallback", error);
+  }
+}
+
+function measureVisibleContent() {
+  const children = [...container.children].filter((child) => !child.hidden);
+  if (children.length === 0) {
+    return { width: 0, height: 0 };
+  }
+
+  const containerStyle = getComputedStyle(container);
+  const gap = parseFloat(containerStyle.columnGap || containerStyle.gap) || 0;
+  const width =
+    children.reduce((sum, child) => sum + child.offsetWidth, 0) +
+    gap * Math.max(0, children.length - 1);
+  const height = Math.max(...children.map((child) => child.offsetHeight));
+
+  return { width, height };
 }
 
 function shouldStartDrag(event) {
@@ -303,4 +381,5 @@ async function showDiagnostics() {
 }
 
 refreshLights();
+scheduleWindowResize();
 window.setInterval(refreshLights, 1000);

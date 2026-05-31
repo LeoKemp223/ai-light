@@ -12,7 +12,7 @@ use std::fs;
 use std::net::IpAddr;
 use std::path::PathBuf;
 use std::sync::Arc;
-use tauri::{AppHandle, Manager, State};
+use tauri::{AppHandle, LogicalSize, Manager, Size, State};
 
 #[derive(Debug, Serialize)]
 pub struct Diagnostics {
@@ -150,6 +150,20 @@ pub fn open_settings(app: AppHandle) -> Result<(), String> {
     window.show().map_err(|error| error.to_string())?;
     window.set_focus().map_err(|error| error.to_string())?;
     Ok(())
+}
+
+#[tauri::command]
+pub fn resize_main_window(app: AppHandle, width: f64, height: f64) -> Result<(), String> {
+    let window = app
+        .get_webview_window("main")
+        .ok_or_else(|| "main window is not available".to_string())?;
+
+    let width = width.clamp(54.0, 1200.0);
+    let height = height.clamp(64.0, 900.0);
+
+    window
+        .set_size(Size::Logical(LogicalSize::new(width, height)))
+        .map_err(|error| error.to_string())
 }
 
 fn validate_http_bind(bind: &str) -> Result<(), String> {

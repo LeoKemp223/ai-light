@@ -15,8 +15,8 @@
       {
         "label": "main",
         "title": "AI Light",
-        "width": 400,
-        "height": 190,
+        "width": 64,
+        "height": 64,
         "resizable": false,
         "decorations": false,
         "transparent": true,
