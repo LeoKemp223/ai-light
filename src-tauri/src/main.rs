@@ -46,6 +46,7 @@ fn main() {
 
             start_http_server(Arc::clone(&server_aggregator))
                 .map_err(|error| std::io::Error::other(error.to_string()))?;
+            ai_light::codex_watcher::start_codex_watcher(Arc::clone(&aggregator))?;
 
             window.emit("state-changed", aggregator.get_lights())?;
 
