@@ -1,15 +1,17 @@
 use crate::aggregator::StateAggregator;
+use crate::config::get_config_dir;
 use crate::types::{Status, Tool};
 use serde_json::Value;
 use std::collections::{HashMap, HashSet};
-use std::fs::{self, File};
-use std::io::{self, BufRead, BufReader, Seek, SeekFrom};
+use std::fs::{self, File, OpenOptions};
+use std::io::{self, BufRead, BufReader, Seek, SeekFrom, Write};
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use std::thread;
-use std::time::Duration;
+use std::time::{Duration, SystemTime};
 
 const POLL_INTERVAL: Duration = Duration::from_secs(1);
+const STALE_WORKING_AFTER: Duration = Duration::from_secs(10 * 60);
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct CodexSessionMeta {
@@ -30,6 +32,7 @@ struct WatchedRollout {
     offset: u64,
     meta: Option<CodexSessionMeta>,
     added_to_aggregator: bool,
+    last_status: Option<Status>,
 }
 
 pub fn start_codex_watcher(aggregator: Arc<StateAggregator>) -> io::Result<()> {
@@ -45,7 +48,9 @@ fn run_codex_watcher(aggregator: Arc<StateAggregator>) {
     let mut baseline = true;
 
     loop {
-        let _ = poll_codex_sessions(&aggregator, &mut files, baseline);
+        if let Err(error) = poll_codex_sessions(&aggregator, &mut files, baseline) {
+            log_watcher_error("poll codex sessions", &error);
+        }
         baseline = false;
         thread::sleep(POLL_INTERVAL);
     }
@@ -74,6 +79,9 @@ fn poll_rollout_root(
     for path in rollouts {
         if files.contains_key(&path) {
             process_new_lines(aggregator, files, &path)?;
+            if let Some(watched) = files.get_mut(&path) {
+                mark_stale_working_session(aggregator, watched, &path)?;
+            }
             continue;
         }
 
@@ -81,6 +89,7 @@ fn poll_rollout_root(
             offset: 0,
             meta: None,
             added_to_aggregator: false,
+            last_status: None,
         };
 
         if baseline {
@@ -91,6 +100,10 @@ fn poll_rollout_root(
 
         if !baseline {
             process_new_lines(aggregator, files, &path)?;
+        }
+
+        if let Some(watched) = files.get_mut(&path) {
+            mark_stale_working_session(aggregator, watched, &path)?;
         }
     }
 
@@ -136,13 +149,20 @@ fn process_new_lines(
 
     loop {
         line.clear();
+        let line_start = reader.stream_position()?;
         let bytes = reader.read_line(&mut line)?;
         if bytes == 0 {
             break;
         }
 
-        if let Ok(event) = parse_codex_line(line.trim_end()) {
-            apply_codex_event(aggregator, watched, event);
+        if !line.ends_with('\n') {
+            reader.seek(SeekFrom::Start(line_start))?;
+            break;
+        }
+
+        match parse_codex_line(line.trim_end()) {
+            Ok(event) => apply_codex_event(aggregator, watched, event),
+            Err(error) => log_watcher_error(&format!("parse {}", path.display()), &error),
         }
     }
 
@@ -165,6 +185,7 @@ fn apply_codex_event(
                     Status::Idle,
                 );
                 watched.added_to_aggregator = true;
+                watched.last_status = Some(Status::Idle);
             }
             watched.meta = Some(meta);
         }
@@ -179,6 +200,7 @@ fn apply_codex_event(
             } else {
                 aggregator.update_session_status(&meta.session_id, status);
             }
+            watched.last_status = Some(status);
         }
         CodexLineEvent::ToolCall(tool_call) => {
             if let Some(meta) = &watched.meta {
@@ -187,6 +209,37 @@ fn apply_codex_event(
         }
         CodexLineEvent::Ignore => {}
     }
+}
+
+fn mark_stale_working_session(
+    aggregator: &StateAggregator,
+    watched: &mut WatchedRollout,
+    path: &Path,
+) -> io::Result<()> {
+    if watched.last_status != Some(Status::Working) {
+        return Ok(());
+    }
+
+    let Some(meta) = &watched.meta else {
+        return Ok(());
+    };
+
+    let modified = fs::metadata(path)?.modified()?;
+    let Ok(age) = SystemTime::now().duration_since(modified) else {
+        return Ok(());
+    };
+
+    if age >= STALE_WORKING_AFTER {
+        aggregator.update_session_status(&meta.session_id, Status::Error);
+        watched.last_status = Some(Status::Error);
+        log_watcher_note(&format!(
+            "marked stale Codex session {} as error after {}s without rollout updates",
+            meta.session_id,
+            age.as_secs()
+        ));
+    }
+
+    Ok(())
 }
 
 pub fn parse_codex_line(line: &str) -> serde_json::Result<CodexLineEvent> {
@@ -303,6 +356,21 @@ fn home_dir() -> Option<PathBuf> {
     std::env::var_os("USERPROFILE")
         .or_else(|| std::env::var_os("HOME"))
         .map(PathBuf::from)
+}
+
+fn log_watcher_error(context: &str, error: &dyn std::fmt::Display) {
+    log_watcher_note(&format!("{context}: {error}"));
+}
+
+fn log_watcher_note(message: &str) {
+    let log_path = get_config_dir().join("ai-light.log");
+    if let Some(parent) = log_path.parent() {
+        let _ = fs::create_dir_all(parent);
+    }
+
+    if let Ok(mut file) = OpenOptions::new().create(true).append(true).open(log_path) {
+        let _ = writeln!(file, "[{:?}] codex_watcher: {message}", SystemTime::now());
+    }
 }
 
 #[cfg(test)]
@@ -453,6 +521,89 @@ mod tests {
         assert_eq!(lights[0].status, Status::Working);
 
         let _ = fs::remove_dir_all(root);
+        let _ = fs::remove_dir_all(project);
+    }
+
+    #[test]
+    fn incomplete_json_line_is_retried_on_next_poll() {
+        let root = std::env::temp_dir().join(unique_name("ai-light-codex-root"));
+        let project = std::env::temp_dir().join(unique_name("ai-light-codex-project"));
+        fs::create_dir_all(&root).unwrap();
+        fs::create_dir_all(&project).unwrap();
+
+        let rollout = root.join("rollout-2026-05-31T00-00-00-s1.jsonl");
+        fs::write(
+            &rollout,
+            format!(
+                "{}\n{}",
+                json_line(
+                    "session_meta",
+                    &format!(r#"{{"id":"s1","cwd":"{}"}}"#, json_path(&project))
+                ),
+                r#"{"type":"event_msg","payload":{"type":"task_started"}}"#
+            ),
+        )
+        .unwrap();
+
+        let aggregator = StateAggregator::new();
+        let mut files = HashMap::new();
+        poll_rollout_root(&aggregator, &mut files, false, &root).unwrap();
+
+        let lights = aggregator.get_lights();
+        assert_eq!(lights.len(), 1);
+        assert_eq!(lights[0].status, Status::Idle);
+
+        fs::write(
+            &rollout,
+            format!(
+                "{}\n{}\n",
+                json_line(
+                    "session_meta",
+                    &format!(r#"{{"id":"s1","cwd":"{}"}}"#, json_path(&project))
+                ),
+                r#"{"type":"event_msg","payload":{"type":"task_started"}}"#
+            ),
+        )
+        .unwrap();
+
+        poll_rollout_root(&aggregator, &mut files, false, &root).unwrap();
+        assert_eq!(aggregator.get_lights()[0].status, Status::Working);
+
+        let _ = fs::remove_dir_all(root);
+        let _ = fs::remove_dir_all(project);
+    }
+
+    #[test]
+    fn stale_working_session_is_marked_error() {
+        let project = std::env::temp_dir().join(unique_name("ai-light-codex-project"));
+        fs::create_dir_all(&project).unwrap();
+        let rollout = project.join("rollout-2026-05-31T00-00-00-s1.jsonl");
+        fs::write(&rollout, "").unwrap();
+
+        let aggregator = StateAggregator::new();
+        let mut watched = WatchedRollout {
+            offset: 0,
+            meta: Some(CodexSessionMeta {
+                session_id: "s1".to_string(),
+                cwd: project.clone(),
+            }),
+            added_to_aggregator: true,
+            last_status: Some(Status::Working),
+        };
+        aggregator.add_session("s1".to_string(), Tool::Codex, &project, Status::Working);
+
+        mark_stale_working_session(&aggregator, &mut watched, &rollout).unwrap();
+        assert_eq!(aggregator.get_lights()[0].status, Status::Working);
+
+        let old_time = filetime::FileTime::from_system_time(
+            SystemTime::now() - STALE_WORKING_AFTER - Duration::from_secs(1),
+        );
+        filetime::set_file_mtime(&rollout, old_time).unwrap();
+
+        mark_stale_working_session(&aggregator, &mut watched, &rollout).unwrap();
+        assert_eq!(aggregator.get_lights()[0].status, Status::Error);
+        assert_eq!(watched.last_status, Some(Status::Error));
+
         let _ = fs::remove_dir_all(project);
     }
 
