@@ -73,10 +73,16 @@
   - `GET /health` returns `200 ok`.
   - Manual `POST /events` returns `200 ok`.
   - `~/.ai_light/bin/ai-light-hook.exe` successfully sends `UserPromptSubmit`, `Stop`, and `SessionEnd` events from stdin.
+- Real Claude Code hook test passes:
+  - `~/.claude/settings.json` was backed up to `settings.json.ai-light-test.bak`.
+  - AI Light hooks were installed while preserving existing Claude settings.
+  - `claude -p --verbose --include-hook-events --output-format stream-json` reported successful `SessionStart`, `UserPromptSubmit`, and `Stop` hook executions with exit code 0.
+  - The Claude test prompt returned `AI_LIGHT_TEST_OK`.
+  - AI Light remained healthy via `GET /health` after the Claude session.
 
 ## Remaining Work
 
 - Install Tauri CLI globally if desired; current successful packaging used `npx @tauri-apps/cli@2.11.2 build`.
 - Add cross-platform packaging configuration for non-Windows hook binary names if macOS/Linux installers are needed.
-- Validate real Claude Code hook flow after user approval to modify `~/.claude/settings.json`: install hooks, run a session, verify idle/working/done/error transitions.
+- Optional UI-level visual check: run AI Light during an interactive Claude Code session and visually confirm yellow/green transitions.
 - Decide whether Codex file watching belongs in this MVP or the next iteration; validation data exists, runtime watcher is not implemented yet.
