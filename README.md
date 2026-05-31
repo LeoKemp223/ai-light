@@ -2,6 +2,10 @@
 
 Desktop traffic light widget for monitoring AI coding assistants (Claude Code, Codex).
 
+
+<img width="806" height="458" alt="image" src="https://github.com/user-attachments/assets/924ac6a8-feeb-4a98-af09-01afd2fb3e24" />
+
+
 ## Status
 
 🚧 **In Development** - MVP implementation in progress
