@@ -31,9 +31,6 @@
   "bundle": {
     "active": true,
     "targets": "all",
-    "icon": ["icons/icon.ico"],
-    "resources": {
-      "../target/release/ai-light-hook.exe": "ai-light-hook.exe"
-    }
+    "icon": ["icons/icon.ico", "icons/icon.png"]
   }
 }
