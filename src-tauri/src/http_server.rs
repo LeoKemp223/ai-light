@@ -101,6 +101,11 @@ fn handle_connection(mut stream: TcpStream, aggregator: Arc<StateAggregator>) ->
 
     match (method, path) {
         ("GET", "/health") => write_response(&mut stream, 200, "OK", "ok"),
+        ("GET", "/state") => {
+            let body = serde_json::to_string(&aggregator.get_lights())
+                .unwrap_or_else(|_| "[]".to_string());
+            write_json_response(&mut stream, 200, "OK", &body)
+        }
         ("POST", "/events") => match parse_hook_event(&body) {
             Ok(event) => {
                 apply_hook_event(&aggregator, event);
@@ -208,6 +213,19 @@ fn write_response(stream: &mut TcpStream, code: u16, reason: &str, body: &str) -
     write!(
         stream,
         "HTTP/1.1 {code} {reason}\r\nContent-Type: text/plain; charset=utf-8\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{body}",
+        body.len()
+    )
+}
+
+fn write_json_response(
+    stream: &mut TcpStream,
+    code: u16,
+    reason: &str,
+    body: &str,
+) -> io::Result<()> {
+    write!(
+        stream,
+        "HTTP/1.1 {code} {reason}\r\nContent-Type: application/json; charset=utf-8\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{body}",
         body.len()
     )
 }

@@ -157,6 +157,14 @@ async function safeInvoke(command, payload) {
   }
 }
 
+async function refreshLights() {
+  const nextLights = await safeInvoke("get_lights");
+  if (Array.isArray(nextLights)) {
+    lights = nextLights;
+    render();
+  }
+}
+
 async function copyProjectPath(projectId) {
   const path = await safeInvoke("copy_path", { projectId });
   if (path && navigator.clipboard) {
@@ -165,3 +173,5 @@ async function copyProjectPath(projectId) {
 }
 
 render();
+refreshLights();
+window.setInterval(refreshLights, 1000);
