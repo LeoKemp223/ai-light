@@ -329,3 +329,9 @@ scripts/
 - [Ubuntu Hook-Only Forwarding](docs/UBUNTU_HOOK_ONLY.md)
 - [Design Spec](docs/superpowers/specs/2026-05-30-ai-light-design.md)
 - [Implementation Plan](docs/superpowers/plans/2026-05-30-ai-light-implementation.md)
+
+
+感谢 LinuxDo 社区的支持！
+[![LinuxDo](https://img.shields.io/badge/LinuxDo-社区支持-blue)](https://linux.do/)
+
+
