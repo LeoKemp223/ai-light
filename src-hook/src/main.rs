@@ -16,10 +16,37 @@ struct HookEvent {
     session_id: String,
     cwd: Option<String>,
     tool_call: Option<String>,
+    tool_source: String,
 }
 
 fn main() {
-    let Some(raw_event_type) = env::args().nth(1) else {
+    let args: Vec<String> = env::args().collect();
+    let mut source = "claude-code".to_string();
+    let mut event_type_arg: Option<String> = None;
+
+    let mut i = 1;
+    while i < args.len() {
+        match args[i].as_str() {
+            "--source" | "--tool-source" => {
+                i += 1;
+                if i < args.len() {
+                    source = args[i].clone();
+                }
+            }
+            "--help" => {
+                eprintln!("Usage: ai-light-hook [--source <tool>] <event_type>");
+                eprintln!("");
+                eprintln!("Tools: claude-code (default), opencode, reasonix");
+                return;
+            }
+            _ => {
+                event_type_arg = Some(args[i].clone());
+            }
+        }
+        i += 1;
+    }
+
+    let Some(raw_event_type) = event_type_arg else {
         append_log("ignored: missing event type argument");
         return;
     };
@@ -47,6 +74,7 @@ fn main() {
             .unwrap_or_else(|| "unknown".to_string()),
         cwd: extract_string(&payload, &["cwd"]),
         tool_call: extract_string(&payload, &["tool_name", "tool", "toolName"]),
+        tool_source: source,
     };
 
     match post_event(&target_url, &event) {
@@ -130,6 +158,20 @@ fn normalize_event_type(event_type: &str) -> String {
         "Notification" | "notification" => "notification",
         "Stop" | "stop" => "stop",
         "SessionEnd" | "session_end" | "sessionend" => "session-end",
+        // opencode event compatibility
+        "session_created" | "session.created" | "SessionCreated" => "session-start",
+        "session_deleted" | "session.deleted" | "SessionDeleted" => "session-end",
+        "session_idle" | "session.idle" | "SessionIdle" => "stop",
+        "tool_execute_before" | "tool.execute.before" | "tool.execute_before" => "pre-tool-use",
+        "tool_execute_after" | "tool.execute.after" | "tool.execute_after" => "post-tool-use",
+        "message_updated" | "message.updated" | "MessageUpdated" => "prompt-submit",
+        "tui_toast_show" | "tui.toast.show" | "TuiToastShow" => "notification",
+        "permission_asked" | "permission.asked" | "PermissionAsked" => "permission-request",
+        // reasonix event compatibility
+        "TurnStart" | "turn_start" | "turnstart" | "turn.start" => "pre-tool-use",
+        "TurnEnd" | "turn_end" | "turnend" | "turn.end" => "stop",
+        "PreModelCall" | "pre_model_call" | "premodelcall" => "pre-tool-use",
+        "PostModelCall" | "post_model_call" | "postmodelcall" => "post-tool-use",
         other => other,
     }
     .to_string()
@@ -195,6 +237,26 @@ mod tests {
         );
         assert_eq!(normalize_event_type("PostToolUse"), "post-tool-use");
         assert_eq!(normalize_event_type("SessionEnd"), "session-end");
+    }
+
+    #[test]
+    fn normalizes_opencode_event_names() {
+        assert_eq!(normalize_event_type("session.created"), "session-start");
+        assert_eq!(normalize_event_type("session.deleted"), "session-end");
+        assert_eq!(normalize_event_type("session.idle"), "stop");
+        assert_eq!(normalize_event_type("tool.execute.before"), "pre-tool-use");
+        assert_eq!(normalize_event_type("tool.execute.after"), "post-tool-use");
+        assert_eq!(normalize_event_type("message.updated"), "prompt-submit");
+        assert_eq!(normalize_event_type("tui.toast.show"), "notification");
+        assert_eq!(normalize_event_type("permission.asked"), "permission-request");
+    }
+
+    #[test]
+    fn normalizes_reasonix_event_names() {
+        assert_eq!(normalize_event_type("TurnStart"), "pre-tool-use");
+        assert_eq!(normalize_event_type("TurnEnd"), "stop");
+        assert_eq!(normalize_event_type("PreModelCall"), "pre-tool-use");
+        assert_eq!(normalize_event_type("PostModelCall"), "post-tool-use");
     }
 
     #[test]

@@ -18,9 +18,28 @@ pub struct HookEvent {
     pub cwd: Option<String>,
     #[serde(default, alias = "tool", alias = "toolName", alias = "tool_name")]
     pub tool_call: Option<String>,
+    #[serde(default = "default_source", alias = "source", alias = "toolSource", alias = "tool_source")]
+    pub tool_source: String,
+}
+
+fn default_session_id() -> String {
+    "unknown".to_string()
+}
+
+fn default_source() -> String {
+    "claude-code".to_string()
 }
 
 impl HookEvent {
+    pub fn tool_source_to_tool(source: &str) -> Tool {
+        match source.to_lowercase().replace(['-', '_', ' '], "") {
+            s if s == "claudecode" || s == "claude" || s == "claude-code" => Tool::ClaudeCode,
+            s if s == "opencode" || s == "open-code" => Tool::OpenCode,
+            s if s == "reasonix" => Tool::Reasonix,
+            _ => Tool::ClaudeCode,
+        }
+    }
+
     pub fn event_type_to_status(event_type: &str) -> Option<Status> {
         match event_type {
             "session-start" => Some(Status::Idle),
@@ -94,10 +113,6 @@ pub fn start_http_server(
     Ok(port)
 }
 
-fn default_session_id() -> String {
-    "unknown".to_string()
-}
-
 fn handle_connection(mut stream: TcpStream, aggregator: Arc<StateAggregator>) -> io::Result<()> {
     let request = read_http_request(&mut stream)?;
     let Some((request_line, body)) = request else {
@@ -167,6 +182,8 @@ fn read_http_request(stream: &mut TcpStream) -> io::Result<Option<(String, Strin
 }
 
 fn apply_hook_event(aggregator: &StateAggregator, event: HookEvent) {
+    let tool = HookEvent::tool_source_to_tool(&event.tool_source);
+
     match event.event_type.as_str() {
         "session-start" => {
             let cwd = event
@@ -176,7 +193,7 @@ fn apply_hook_event(aggregator: &StateAggregator, event: HookEvent) {
                 .or_else(|| std::env::current_dir().ok())
                 .unwrap_or_else(|| PathBuf::from("."));
 
-            aggregator.add_session(event.session_id, Tool::ClaudeCode, &cwd, Status::Idle);
+            aggregator.add_session(event.session_id, tool, &cwd, Status::Idle);
         }
         "session-end" => {
             aggregator.remove_session(&event.session_id);
@@ -263,5 +280,14 @@ mod tests {
         let headers = "POST /events HTTP/1.1\r\ncontent-length: 42\r\n";
 
         assert_eq!(parse_content_length(headers), 42);
+    }
+
+    #[test]
+    fn maps_tool_source_to_tool() {
+        assert_eq!(HookEvent::tool_source_to_tool("claude-code"), Tool::ClaudeCode);
+        assert_eq!(HookEvent::tool_source_to_tool("opencode"), Tool::OpenCode);
+        assert_eq!(HookEvent::tool_source_to_tool("open-code"), Tool::OpenCode);
+        assert_eq!(HookEvent::tool_source_to_tool("reasonix"), Tool::Reasonix);
+        assert_eq!(HookEvent::tool_source_to_tool("unknown"), Tool::ClaudeCode);
     }
 }

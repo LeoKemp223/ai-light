@@ -33,13 +33,30 @@
         </div>
       </dl>
 
+      <hr />
+
       <section class="integration">
-        <button id="install-integration" type="button">
-          Install Claude Integration
-        </button>
-        <button id="remove-integration" class="danger" type="button">
-          Remove Claude Integration
-        </button>
+        <h2>Claude Code</h2>
+        <p class="hint">Installs hooks to ~/.claude/settings.json</p>
+        <button id="install-claude" type="button">Install Claude Integration</button>
+        <button id="remove-claude" class="danger" type="button">Remove Claude Integration</button>
+        <span id="claude-status" class="integration-status"></span>
+      </section>
+
+      <section class="integration">
+        <h2>OpenCode</h2>
+        <p class="hint">Registers plugin in ~/.config/opencode/opencode.json</p>
+        <button id="install-opencode" type="button">Install OpenCode Integration</button>
+        <button id="remove-opencode" class="danger" type="button">Remove OpenCode Integration</button>
+        <span id="opencode-status" class="integration-status"></span>
+      </section>
+
+      <section class="integration">
+        <h2>Reasonix</h2>
+        <p class="hint">Writes hooks to ~/.reasonix/settings.json</p>
+        <button id="install-reasonix" type="button">Install Reasonix Integration</button>
+        <button id="remove-reasonix" class="danger" type="button">Remove Reasonix Integration</button>
+        <span id="reasonix-status" class="integration-status"></span>
       </section>
 
       <div id="status" role="status"></div>

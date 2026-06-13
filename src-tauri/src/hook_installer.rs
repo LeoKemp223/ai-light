@@ -201,6 +201,231 @@ pub fn remove_ai_light_hooks(mut existing: Value) -> Result<Value, String> {
     Ok(existing)
 }
 
+// --- opencode integration ---
+
+pub fn get_opencode_config_path() -> PathBuf {
+    home_dir()
+        .unwrap_or_else(|| PathBuf::from("."))
+        .join(".config")
+        .join("opencode")
+        .join("opencode.json")
+}
+
+pub fn get_opencode_plugin_source_path() -> PathBuf {
+    home_dir()
+        .unwrap_or_else(|| PathBuf::from("."))
+        .join(".ai_light")
+        .join("opencode-plugin.js")
+}
+
+pub fn install_opencode_integration() -> Result<(), Box<dyn std::error::Error>> {
+    let plugin_source = bundled_opencode_plugin_path()?;
+    let plugin_dest = get_opencode_plugin_source_path();
+
+    if let Some(parent) = plugin_dest.parent() {
+        fs::create_dir_all(parent)?;
+    }
+    fs::copy(&plugin_source, &plugin_dest)?;
+
+    let config_path = get_opencode_config_path();
+    let existing = if config_path.exists() {
+        let content = fs::read_to_string(&config_path)?;
+        serde_json::from_str(&content).unwrap_or_else(|_| json!({}))
+    } else {
+        json!({})
+    };
+
+    let plugin_path = plugin_dest.to_string_lossy().to_string();
+    let mut config = existing;
+    if !config.is_object() {
+        config = json!({});
+    }
+    if config.get("plugins").is_none() {
+        config["plugins"] = json!({});
+    }
+    config["plugins"][&plugin_path] = json!({});
+
+    if let Some(parent) = config_path.parent() {
+        fs::create_dir_all(parent)?;
+    }
+    if config_path.exists() {
+        fs::copy(&config_path, config_path.with_extension("json.ai-light.bak"))?;
+    }
+    fs::write(&config_path, serde_json::to_string_pretty(&config)?)?;
+
+    Ok(())
+}
+
+pub fn remove_opencode_integration() -> Result<(), Box<dyn std::error::Error>> {
+    let config_path = get_opencode_config_path();
+    if config_path.exists() {
+        let content = fs::read_to_string(&config_path)?;
+        let mut config: Value = serde_json::from_str(&content).unwrap_or(json!({}));
+
+        if let Some(plugins) = config.get_mut("plugins").and_then(Value::as_object_mut) {
+            let plugin_path = get_opencode_plugin_source_path();
+            let plugin_key = plugin_path.to_string_lossy().to_string();
+            plugins.remove(&plugin_key);
+        }
+
+        fs::copy(&config_path, config_path.with_extension("json.ai-light.bak"))?;
+        fs::write(&config_path, serde_json::to_string_pretty(&config)?)?;
+    }
+
+    let plugin_path = get_opencode_plugin_source_path();
+    if plugin_path.exists() {
+        fs::remove_file(plugin_path)?;
+    }
+
+    Ok(())
+}
+
+pub fn check_opencode_integration() -> Result<bool, Box<dyn std::error::Error>> {
+    let plugin_path = get_opencode_plugin_source_path();
+    if !plugin_path.exists() {
+        return Ok(false);
+    }
+
+    let config_path = get_opencode_config_path();
+    if !config_path.exists() {
+        return Ok(false);
+    }
+
+    let content = fs::read_to_string(&config_path)?;
+    let config: Value = serde_json::from_str(&content)?;
+    let plugin_key = plugin_path.to_string_lossy().to_string();
+
+    Ok(config
+        .get("plugins")
+        .and_then(Value::as_object)
+        .is_some_and(|plugins| plugins.contains_key(&plugin_key)))
+}
+
+// --- reasonix integration ---
+
+pub fn get_reasonix_settings_path() -> PathBuf {
+    home_dir()
+        .unwrap_or_else(|| PathBuf::from("."))
+        .join(".reasonix")
+        .join("settings.json")
+}
+
+pub fn install_reasonix_integration() -> Result<(), Box<dyn std::error::Error>> {
+    let hook_path = get_hook_binary_path();
+    if !hook_path.exists() {
+        return Err(format!("hook binary not found: {}", hook_path.display()).into());
+    }
+
+    let settings_path = get_reasonix_settings_path();
+    let existing = if settings_path.exists() {
+        let content = fs::read_to_string(&settings_path)?;
+        serde_json::from_str(&content).unwrap_or_else(|_| json!({}))
+    } else {
+        json!({})
+    };
+
+    let hook_cmd = hook_path.to_string_lossy().to_string();
+    let mut config = existing;
+    if !config.is_object() {
+        config = json!({});
+    }
+
+    let reasonix_hooks = json!({
+        "SessionStart": [
+            {
+                "match": "",
+                "command": [hook_cmd.clone(), "--source", "reasonix", "session-start"].join(" ")
+            }
+        ],
+        "PreToolUse": [
+            {
+                "match": "",
+                "command": [hook_cmd.clone(), "--source", "reasonix", "pre-tool-use"].join(" ")
+            }
+        ],
+        "PostToolUse": [
+            {
+                "match": "",
+                "command": [hook_cmd.clone(), "--source", "reasonix", "post-tool-use"].join(" ")
+            }
+        ],
+        "UserPromptSubmit": [
+            {
+                "match": "",
+                "command": [hook_cmd.clone(), "--source", "reasonix", "prompt-submit"].join(" ")
+            }
+        ],
+        "Stop": [
+            {
+                "match": "",
+                "command": [hook_cmd.clone(), "--source", "reasonix", "stop"].join(" ")
+            }
+        ],
+        "TurnStart": [
+            {
+                "match": "",
+                "command": [hook_cmd.clone(), "--source", "reasonix", "pre-tool-use"].join(" ")
+            }
+        ],
+        "TurnEnd": [
+            {
+                "match": "",
+                "command": [hook_cmd.clone(), "--source", "reasonix", "stop"].join(" ")
+            }
+        ],
+        "SessionEnd": [
+            {
+                "match": "",
+                "command": [hook_cmd, "--source", "reasonix", "session-end"].join(" ")
+            }
+        ]
+    });
+
+    config["hooks"] = reasonix_hooks;
+
+    if let Some(parent) = settings_path.parent() {
+        fs::create_dir_all(parent)?;
+    }
+    if settings_path.exists() {
+        fs::copy(&settings_path, settings_path.with_extension("json.ai-light.bak"))?;
+    }
+    fs::write(&settings_path, serde_json::to_string_pretty(&config)?)?;
+
+    Ok(())
+}
+
+pub fn remove_reasonix_integration() -> Result<(), Box<dyn std::error::Error>> {
+    let settings_path = get_reasonix_settings_path();
+    if settings_path.exists() {
+        let content = fs::read_to_string(&settings_path)?;
+        let mut config: Value = serde_json::from_str(&content).unwrap_or(json!({}));
+
+        if config.is_object() {
+            config["hooks"] = json!({});
+        }
+
+        fs::copy(&settings_path, settings_path.with_extension("json.ai-light.bak"))?;
+        fs::write(&settings_path, serde_json::to_string_pretty(&config)?)?;
+    }
+
+    Ok(())
+}
+
+pub fn check_reasonix_integration() -> Result<bool, Box<dyn std::error::Error>> {
+    let settings_path = get_reasonix_settings_path();
+    if !settings_path.exists() {
+        return Ok(false);
+    }
+
+    let content = fs::read_to_string(&settings_path)?;
+    let config: Value = serde_json::from_str(&content)?;
+
+    Ok(config
+        .get("hooks")
+        .and_then(Value::as_object)
+        .is_some_and(|hooks| hooks.contains_key("SessionStart")))
+}
+
 fn hook_binary_name() -> &'static str {
     if cfg!(windows) {
         "ai-light-hook.exe"
@@ -216,6 +441,97 @@ fn bundled_hook_candidates(resource_dir: &Path) -> Vec<PathBuf> {
         resource_dir.join("ai-light-hook"),
     ]
 }
+
+fn bundled_opencode_plugin_path() -> Result<PathBuf, Box<dyn std::error::Error>> {
+    let dest = get_opencode_plugin_source_path();
+    if let Some(parent) = dest.parent() {
+        fs::create_dir_all(parent)?;
+    }
+    fs::write(&dest, OPENCODE_PLUGIN_SOURCE)?;
+    Ok(dest)
+}
+
+const OPENCODE_PLUGIN_SOURCE: &str = r#"/**
+ * AI Light OpenCode Plugin
+ *
+ * Sends OpenCode session events to AI Light's local HTTP server.
+ *
+ * ## Installation
+ *
+ * Add to ~/.config/opencode/opencode.json:
+ * {
+ *   "plugins": {
+ *     "https://raw.githubusercontent.com/lcy05/ai-light/main/scripts/opencode-plugin.js": {}
+ *   }
+ * }
+ *
+ * Or copy this file to ~/.config/opencode/plugins/ai-light.js
+ */
+
+/// <reference types="@opencode-ai/plugin" />
+
+/**
+ * @type {import("@opencode-ai/plugin").Plugin}
+ */
+export default async function aiLightPlugin(ctx) {
+  const AI_LIGHT_URL =
+    process.env.AI_LIGHT_URL ||
+    "http://127.0.0.1:17321";
+
+  function baseUrl() {
+    return AI_LIGHT_URL.replace(/\/+$/, "");
+  }
+
+  async function sendEvent(eventType, payload) {
+    try {
+      const url = `${baseUrl()}/events`;
+      const body = JSON.stringify({
+        event_type: eventType,
+        session_id: payload.session?.id || "unknown",
+        sessionId: payload.session?.id || "unknown",
+        cwd: payload.session?.cwd || payload.cwd || process.cwd(),
+        tool_call: payload.tool?.name || payload.toolName || null,
+        toolName: payload.tool?.name || payload.toolName || null,
+        tool_source: "opencode",
+        source: "opencode",
+      });
+      const response = await fetch(url, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body,
+      });
+      if (!response.ok) {
+        console.error(`AI Light: event ${eventType} failed (${response.status})`);
+      }
+    } catch (error) {
+      // AI Light not running -- silently ignore
+    }
+  }
+
+  return {
+    "session.created": async (input) => {
+      await sendEvent("session-start", input);
+    },
+    "session.deleted": async (input) => {
+      await sendEvent("session-end", input);
+    },
+    "session.idle": async (input) => {
+      await sendEvent("stop", input);
+    },
+    "tool.execute.before": async (input) => {
+      await sendEvent("pre-tool-use", input);
+    },
+    "tool.execute.after": async (input) => {
+      await sendEvent("post-tool-use", input);
+    },
+    "message.updated": async (input) => {
+      if (input.role === "user") {
+        await sendEvent("prompt-submit", input);
+      }
+    },
+  };
+}
+"#;
 
 fn remove_existing_ai_light_hooks(event_hooks: &mut Vec<Value>) {
     event_hooks.retain(|entry| !entry_contains_ai_light_hook(entry));

@@ -207,8 +207,14 @@ function tooltipFor(lightState) {
     lightState.status || "Idle",
   ];
 
+  if (lightState.sessions && lightState.sessions.length > 0) {
+    const tools = [...new Set(lightState.sessions.map((s) => s.tool || "?"))];
+    parts.push("───");
+    parts.push("Tools: " + tools.join(", "));
+  }
+
   if (lightState.last_tool_call) {
-    parts.push(lightState.last_tool_call);
+    parts.push("Last: " + lightState.last_tool_call);
   }
 
   return parts.join("\n");

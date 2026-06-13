@@ -1,4 +1,6 @@
 use serde::{Deserialize, Serialize};
+use std::fmt;
+use std::str::FromStr;
 use std::time::Instant;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
@@ -13,6 +15,43 @@ pub enum Status {
 pub enum Tool {
     ClaudeCode,
     Codex,
+    OpenCode,
+    Reasonix,
+}
+
+impl Tool {
+    pub fn label(&self) -> &'static str {
+        match self {
+            Tool::ClaudeCode => "Claude Code",
+            Tool::Codex => "Codex",
+            Tool::OpenCode => "OpenCode",
+            Tool::Reasonix => "Reasonix",
+        }
+    }
+
+    pub fn all() -> &'static [Tool] {
+        &[Tool::ClaudeCode, Tool::Codex, Tool::OpenCode, Tool::Reasonix]
+    }
+}
+
+impl FromStr for Tool {
+    type Err = String;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s.to_lowercase().replace(['-', '_', ' '], "") {
+            s if s == "claudecode" || s == "claude" || s == "claude-code" => Ok(Tool::ClaudeCode),
+            s if s == "codex" => Ok(Tool::Codex),
+            s if s == "opencode" || s == "open-code" => Ok(Tool::OpenCode),
+            s if s == "reasonix" => Ok(Tool::Reasonix),
+            _ => Err(format!("unknown tool: {s}")),
+        }
+    }
+}
+
+impl fmt::Display for Tool {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", self.label())
+    }
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -47,7 +86,6 @@ impl LightState {
         }
     }
 
-    /// Aggregate status from all sessions (max by severity)
     pub fn aggregate_status(&mut self) {
         self.status = self
             .sessions
