@@ -4,7 +4,9 @@ use ai_light::config::{
     load_app_config, load_runtime_config, save_app_config,
 };
 use ai_light::hook_installer::{
-    check_hooks_installed, install_hooks, preview_hook_config, remove_hooks,
+    check_hooks_installed, check_opencode_integration, check_reasonix_integration,
+    install_hooks, install_opencode_integration, install_reasonix_integration, preview_hook_config,
+    remove_hooks, remove_opencode_integration, remove_reasonix_integration,
 };
 use ai_light::types::LightState;
 use serde::{Deserialize, Serialize};
@@ -28,6 +30,8 @@ pub struct Diagnostics {
     pub runtime_exists: bool,
     pub light_count: usize,
     pub recent_log: String,
+    pub opencode_integration: bool,
+    pub reasonix_integration: bool,
 }
 
 #[derive(Debug, Serialize)]
@@ -127,6 +131,8 @@ pub fn get_diagnostics(aggregator: State<Arc<StateAggregator>>) -> Diagnostics {
         runtime_exists: get_runtime_path().exists(),
         light_count: aggregator.get_lights().len(),
         recent_log: recent_log(&log_path),
+        opencode_integration: check_opencode_integration().unwrap_or(false),
+        reasonix_integration: check_reasonix_integration().unwrap_or(false),
     }
 }
 
@@ -246,6 +252,40 @@ pub fn preview_hook_config_command() -> Result<String, String> {
 #[tauri::command]
 pub fn quit_app(app: AppHandle) {
     app.exit(0);
+}
+
+// --- opencode integration commands ---
+
+#[tauri::command]
+pub fn check_opencode() -> bool {
+    check_opencode_integration().unwrap_or(false)
+}
+
+#[tauri::command]
+pub fn install_opencode_command() -> Result<(), String> {
+    install_opencode_integration().map_err(|error| error.to_string())
+}
+
+#[tauri::command]
+pub fn remove_opencode_command() -> Result<(), String> {
+    remove_opencode_integration().map_err(|error| error.to_string())
+}
+
+// --- reasonix integration commands ---
+
+#[tauri::command]
+pub fn check_reasonix() -> bool {
+    check_reasonix_integration().unwrap_or(false)
+}
+
+#[tauri::command]
+pub fn install_reasonix_command() -> Result<(), String> {
+    install_reasonix_integration().map_err(|error| error.to_string())
+}
+
+#[tauri::command]
+pub fn remove_reasonix_command() -> Result<(), String> {
+    remove_reasonix_integration().map_err(|error| error.to_string())
 }
 
 fn open_path(path: &str) -> Result<(), String> {

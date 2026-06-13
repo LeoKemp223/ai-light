@@ -45,7 +45,13 @@ fn main() {
             ipc::install_hooks_command,
             ipc::remove_hooks_command,
             ipc::preview_hook_config_command,
-            ipc::quit_app
+            ipc::quit_app,
+            ipc::check_opencode,
+            ipc::install_opencode_command,
+            ipc::remove_opencode_command,
+            ipc::check_reasonix,
+            ipc::install_reasonix_command,
+            ipc::remove_reasonix_command,
         ])
         .setup(move |app| {
             if existing_instance_is_healthy() {

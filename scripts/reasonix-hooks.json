@@ -1,0 +1,100 @@
+{
+  "hooks": {
+    "SessionStart": [
+      {
+        "match": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "ai-light-hook",
+            "args": ["--source", "reasonix", "session-start"]
+          }
+        ]
+      }
+    ],
+    "PreToolUse": [
+      {
+        "match": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "ai-light-hook",
+            "args": ["--source", "reasonix", "pre-tool-use"]
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "match": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "ai-light-hook",
+            "args": ["--source", "reasonix", "post-tool-use"]
+          }
+        ]
+      }
+    ],
+    "UserPromptSubmit": [
+      {
+        "match": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "ai-light-hook",
+            "args": ["--source", "reasonix", "prompt-submit"]
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "match": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "ai-light-hook",
+            "args": ["--source", "reasonix", "stop"]
+          }
+        ]
+      }
+    ],
+    "TurnStart": [
+      {
+        "match": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "ai-light-hook",
+            "args": ["--source", "reasonix", "pre-tool-use"]
+          }
+        ]
+      }
+    ],
+    "TurnEnd": [
+      {
+        "match": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "ai-light-hook",
+            "args": ["--source", "reasonix", "stop"]
+          }
+        ]
+      }
+    ],
+    "SessionEnd": [
+      {
+        "match": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "ai-light-hook",
+            "args": ["--source", "reasonix", "session-end"]
+          }
+        ]
+      }
+    ]
+  }
+}
